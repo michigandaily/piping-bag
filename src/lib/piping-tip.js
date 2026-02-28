@@ -1,0 +1,6 @@
+/**
+ * @param {{
+ */
+export function pipe() {
+
+}
