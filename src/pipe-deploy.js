@@ -34,28 +34,28 @@ const main = async ([], opts) => {
     fatal_error("File path defined in pipe configuration does not exist.");
   }
 
-  // let credentials;
+  let credentials;
 
-  // if (profile) {
-  //   credentials = fromIni({ profile });
-  // } else {
-  //   console.log(
-  //     "no AWS credentials profile was specified. falling back to environment variables.",
-  //   );
-  //   await import("dotenv/config");
+  if (profile) {
+    credentials = fromIni({ profile });
+  } else {
+    console.log(
+      "no AWS credentials profile was specified. falling back to environment variables.",
+    );
+    await import("dotenv/config");
 
-  //   if (
-  //     !!process.env.AWS_ACCESS_KEY_ID &&
-  //     !!process.env.AWS_SECRET_ACCESS_KEY
-  //   ) {
-  //     credentials = fromEnv();
-  //   } else {
-  //     console.error(
-  //       "no AWS credentials were specified in the environment variables. exiting.",
-  //     );
-  //     exit(1);
-  //   }
-  // }
+    if (
+      !!process.env.AWS_ACCESS_KEY_ID &&
+      !!process.env.AWS_SECRET_ACCESS_KEY
+    ) {
+      credentials = fromEnv();
+    } else {
+      console.error(
+        "no AWS credentials were specified in the environment variables. exiting.",
+      );
+      exit(1);
+    }
+  }
 
   let lambdaDir;
 
