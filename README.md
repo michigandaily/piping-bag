@@ -1,6 +1,7 @@
 # piping-bag
 
 > An standardized elections data pipeline for The Michigan Daily
+
 > [!WARNING]  
 > This library is a work in progress
 
