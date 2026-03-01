@@ -4,7 +4,7 @@
   "description": "Helper scripts for data collection at The Michigan Daily",
   "main": "./src/config.js",
   "bin": {
-    "piping-bag": "src/piping-bag.js"
+    "pipe": "src/pipe.js"
   },
   "repository": "https://github.com/MichiganDaily/piping-bag",
   "author": {
