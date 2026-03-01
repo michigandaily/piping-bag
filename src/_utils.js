@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  statSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -20,6 +26,8 @@ export const read_js_config = async (path) => {
 };
 
 export const has_filled_props = (o) => Object.values(o).every((v) => v.length);
+
+export const is_dir = (dir) => statSync(dir).isDirectory();
 
 // Search directory for configuration file
 export const load_config = async (configFile = null) => {
