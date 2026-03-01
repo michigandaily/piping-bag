@@ -24,10 +24,10 @@ export const has_filled_props = (o) => Object.values(o).every((v) => v.length);
 // Search directory for configuration file
 export const load_config = async (configFile = null) => {
   const defaults = [
-    "sink.config.js",
-    "sink.config.mjs",
-    "sink.config.cjs",
-    "sink.config.json",
+    "pipe.config.js",
+    "pipe.config.mjs",
+    "pipe.config.cjs",
+    "pipe.config.json",
   ];
   const searchFiles = configFile ? [configFile, ...defaults] : defaults;
   for (const searchFile of searchFiles) {
