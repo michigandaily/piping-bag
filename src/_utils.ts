@@ -14,7 +14,7 @@ import chalk from "chalk";
 import { findUp } from "find-up";
 import "dotenv/config";
 
-import type { Config } from "./types.ts";
+import type { Config } from "./types.js";
 
 const _is_js_config = (filename: string) => {
   return extname(filename) === ".js";
