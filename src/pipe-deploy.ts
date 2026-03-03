@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import AdmZip from "adm-zip";
 
 import { program } from "commander";
@@ -7,17 +7,18 @@ import { program } from "commander";
 import { LambdaClient } from "@aws-sdk/client-lambda";
 import { fromIni, fromEnv } from "@aws-sdk/credential-providers";
 
-import { fatal_error, is_dir, load_config, success } from "./_utils.js";
+import { fatal_error, is_dir, load_config, success } from "./_utils.ts";
+import type { Options } from "./types.ts";
 
 const self = fileURLToPath(import.meta.url);
 
-const main = async ([], opts) => {
-  const { config } = await load_config(opts.config);
+const main = async ([], opts: Options) => {
+  const { config } = (await load_config(opts.config))!;
 
   const shouldZip = opts.zip
   const manualPrompt = opts.yes === undefined;
 
-  const { path, zip_dir, profile } = config.deployment;
+  const { name, desc, handler, path, zip_dir, profile } = config.deployment;
 
   if (!path || path.length === 0) {
     fatal_error("File path is not defined in pipe configuration");
@@ -50,10 +51,9 @@ const main = async ([], opts) => {
     ) {
       credentials = fromEnv();
     } else {
-      console.error(
+      fatal_error(
         "no AWS credentials were specified in the environment variables. exiting.",
       );
-      exit(1);
     }
   }
 
@@ -79,7 +79,7 @@ const main = async ([], opts) => {
       }
 
       zip.writeZip(lambdaDir);
-    } catch (error) {
+    } catch (error: any) {
       fatal_error(error);
     }
 
@@ -88,6 +88,33 @@ const main = async ([], opts) => {
     lambdaDir = path;
     console.log(`Skipping zip step for provided file at ${path}`);
   }
+
+
+
+  //  try {
+  //   const code = readFileSync(lambdaDir);
+
+  //   const params = {
+  //     FunctionName: name,
+  //     Runtime: runtime,
+  //     Role: roleArn,
+  //     Handler: handler,
+  //     Code: {
+  //       ZipFile: code,
+  //     },
+  //     Description: desc,
+  //     Publish: true,
+  //   };
+
+  //   const command = new CreateFunctionCommand(params);
+  //   const data = await lambdaClient.send(command);
+
+  //   console.log("Function created successfully:", data.FunctionName);
+  //   return data;
+  // } catch (err) {
+  //   console.error("Error creating function:", err);
+  // }
+
 };
 
 if (process.argv[1] === self) {

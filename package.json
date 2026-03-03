@@ -2,9 +2,9 @@
   "name": "piping-bag",
   "version": "0.0.1",
   "description": "Helper scripts for data collection at The Michigan Daily",
-  "main": "./src/config.js",
+  "main": "./src/config.ts",
   "bin": {
-    "pipe": "src/pipe.js"
+    "pipe": "src/pipe.ts"
   },
   "repository": "https://github.com/MichiganDaily/piping-bag",
   "author": {
@@ -23,6 +23,8 @@
     "find-up": "^8.0.0"
   },
   "devDependencies": {
-    "eslint": "^10.0.2"
+    "@types/adm-zip": "^0.5.7",
+    "eslint": "^10.0.2",
+    "typescript": "^5.9.3"
   }
 }
