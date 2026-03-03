@@ -10,5 +10,6 @@ yarn-error.log
 !example.aws-iam-policy.json
 !example.pipe.config.js
 
+dist
 dist/*
 .env

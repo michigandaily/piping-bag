@@ -7,8 +7,8 @@ import { program } from "commander";
 import { LambdaClient } from "@aws-sdk/client-lambda";
 import { fromIni, fromEnv } from "@aws-sdk/credential-providers";
 
-import { fatal_error, is_dir, load_config, success } from "./_utils.ts";
-import type { Options } from "./types.ts";
+import { fatal_error, is_dir, load_config, success } from "./_utils.js";
+import type { Options } from "./types.js";
 
 const self = fileURLToPath(import.meta.url);
 
