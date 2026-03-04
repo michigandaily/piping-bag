@@ -9,13 +9,14 @@ import { fromIni, fromEnv } from "@aws-sdk/credential-providers";
 
 import { fatal_error, is_dir, load_config, success } from "./_utils.js";
 import type { Options } from "./types.js";
+import { basename, dirname, extname } from "node:path";
 
 const self = fileURLToPath(import.meta.url);
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
-  const shouldZip = opts.zip
+  const shouldZip = opts.zip;
   const manualPrompt = opts.yes === undefined;
 
   const { name, desc, handler, path, zip_dir, profile } = config.deployment;
@@ -64,12 +65,14 @@ const main = async ([], opts: Options) => {
   }
 
   if (shouldZip) {
-    const outputFile = `${path.split("/").at(-1)}.zip`;
-    console.log(`Zipping provided file to ${outputFile} from path ${path}`);
-
-    lambdaDir = `${zip_dir}/${outputFile}`;
+    let outputFile;
 
     try {
+      outputFile = `${basename(path, extname(path))}.zip`;
+      console.log(`Zipping provided file ${basename(path)} from path ${dirname(path)}`);
+
+      lambdaDir = `${zip_dir}/${outputFile}`;
+
       const zip = new AdmZip();
 
       if (is_dir(path)) {
@@ -88,8 +91,6 @@ const main = async ([], opts: Options) => {
     lambdaDir = path;
     console.log(`Skipping zip step for provided file at ${path}`);
   }
-
-
 
   //  try {
   //   const code = readFileSync(lambdaDir);
@@ -114,7 +115,6 @@ const main = async ([], opts: Options) => {
   // } catch (err) {
   //   console.error("Error creating function:", err);
   // }
-
 };
 
 if (process.argv[1] === self) {
