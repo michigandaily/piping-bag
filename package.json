@@ -3,9 +3,6 @@
   "version": "0.0.1",
   "description": "Helper scripts for data collection at The Michigan Daily",
   "types": "dist/config.d.ts",
-  "files": [
-    "/dist"
-  ],
   "bin": {
     "pipe": "./dist/pipe.js"
   },
