@@ -6,6 +6,7 @@ export default defineConfig({
     "src/pipe.ts",
     "src/pipe-deploy.ts",
     "src/lib/schema.ts",
+    "src/types.ts"
   ],
   format: ["cjs", "esm"],
   dts: true,

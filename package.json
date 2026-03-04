@@ -2,7 +2,6 @@
   "name": "piping-bag",
   "version": "0.0.1",
   "description": "Helper scripts for data collection at The Michigan Daily",
-  "main": "./dist/config.js",
   "types": "dist/config.d.ts",
   "files": [
     "/dist"
@@ -18,6 +17,11 @@
     "dev": "tsup --watch",
     "build": "tsup",
     "prepare": "pnpm run build"
+  },
+  "exports": {
+    ".": "./dist/config.js",
+    "./lib/schema": "./dist/lib/schema.js",
+    "./types": "./dist/types.js"
   },
   "license": "MIT",
   "private": true,
