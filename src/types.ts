@@ -1,7 +1,7 @@
 export type Config = {
   deployment: {
     name: string;
-    desc: string;
+    region: string;
     handler: string;
     path: string;
     zip_dir: string;
