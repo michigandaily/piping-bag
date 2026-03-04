@@ -16,7 +16,7 @@ import "dotenv/config";
 
 import type { Config } from "./types.js";
 
-const _is_js_config = (filename: string) => {
+const is_js_file = (filename: string) => {
   return extname(filename) === ".js";
 };
 
@@ -45,7 +45,7 @@ export const load_config = async (configFile: string | null = null) => {
   for (const searchFile of searchFiles) {
     const path = await findUp(searchFile);
     if (typeof path === "undefined") continue;
-    if (_is_js_config(path)) {
+    if (is_js_file(path)) {
       return await read_js_config(path);
     }
     return read_json_config(path);
