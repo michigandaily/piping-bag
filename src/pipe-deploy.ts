@@ -1,15 +1,15 @@
 import { fileURLToPath } from "node:url";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
+import { basename, dirname, extname } from "node:path";
 import AdmZip from "adm-zip";
 
 import { program } from "commander";
 
-import { LambdaClient } from "@aws-sdk/client-lambda";
-import { fromIni, fromEnv } from "@aws-sdk/credential-providers";
+import { LambdaClient, CreateFunctionCommand } from "@aws-sdk/client-lambda";
 
 import { fatal_error, is_dir, load_config, success } from "./_utils.js";
 import type { Options } from "./types.js";
-import { basename, dirname, extname } from "node:path";
+import { PIPE_ROLE, DEFAULT_REGION, RUNTIME } from "./_defaults.js";
 
 const self = fileURLToPath(import.meta.url);
 
@@ -19,7 +19,7 @@ const main = async ([], opts: Options) => {
   const shouldZip = opts.zip;
   const manualPrompt = opts.yes === undefined;
 
-  const { name, desc, handler, path, zip_dir, profile } = config.deployment;
+  const { name, region, handler, path, zip_dir, profile } = config.deployment;
 
   if (!path || path.length === 0) {
     fatal_error("File path is not defined in pipe configuration");
@@ -36,28 +36,6 @@ const main = async ([], opts: Options) => {
     fatal_error("File path defined in pipe configuration does not exist.");
   }
 
-  let credentials;
-
-  if (profile) {
-    credentials = fromIni({ profile });
-  } else {
-    console.log(
-      "no AWS credentials profile was specified. falling back to environment variables.",
-    );
-    await import("dotenv/config");
-
-    if (
-      !!process.env.AWS_ACCESS_KEY_ID &&
-      !!process.env.AWS_SECRET_ACCESS_KEY
-    ) {
-      credentials = fromEnv();
-    } else {
-      fatal_error(
-        "no AWS credentials were specified in the environment variables. exiting.",
-      );
-    }
-  }
-
   let lambdaDir;
 
   if (!existsSync(zip_dir)) {
@@ -69,7 +47,9 @@ const main = async ([], opts: Options) => {
 
     try {
       outputFile = `${basename(path, extname(path))}.zip`;
-      console.log(`Zipping provided file ${basename(path)} from path ${dirname(path)}`);
+      console.log(
+        `Zipping provided file ${basename(path)} from path ${dirname(path)}`,
+      );
 
       lambdaDir = `${zip_dir}/${outputFile}`;
 
@@ -92,29 +72,31 @@ const main = async ([], opts: Options) => {
     console.log(`Skipping zip step for provided file at ${path}`);
   }
 
-  //  try {
-  //   const code = readFileSync(lambdaDir);
+  // TODO: Check if lambda exists, and update instead of creating if it exists
 
-  //   const params = {
-  //     FunctionName: name,
-  //     Runtime: runtime,
-  //     Role: roleArn,
-  //     Handler: handler,
-  //     Code: {
-  //       ZipFile: code,
-  //     },
-  //     Description: desc,
-  //     Publish: true,
-  //   };
+  console.log(`Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`);
 
-  //   const command = new CreateFunctionCommand(params);
-  //   const data = await lambdaClient.send(command);
+  const lambdaClient = new LambdaClient({ region: region ?? DEFAULT_REGION, profile});
+  try {
+    const code = readFileSync(lambdaDir!);
 
-  //   console.log("Function created successfully:", data.FunctionName);
-  //   return data;
-  // } catch (err) {
-  //   console.error("Error creating function:", err);
-  // }
+    const params = {
+      FunctionName: name,
+      Runtime: RUNTIME.DEFAULT_NODEJS,
+      Handler: handler,
+      Role: PIPE_ROLE,
+      Code: {
+        ZipFile: code,
+      }
+    };
+
+    const command = new CreateFunctionCommand(params);
+    const res = await lambdaClient.send(command);
+
+    success(`Function created successfully:", ${res.FunctionName}`);
+  } catch (err: any) {
+    fatal_error(err);
+  }
 };
 
 if (process.argv[1] === self) {
