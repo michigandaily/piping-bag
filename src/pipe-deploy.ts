@@ -5,7 +5,13 @@ import AdmZip from "adm-zip";
 
 import { program } from "commander";
 
-import { LambdaClient, CreateFunctionCommand } from "@aws-sdk/client-lambda";
+import {
+  LambdaClient,
+  CreateFunctionCommand,
+  GetFunctionCommand,
+  UpdateFunctionCodeCommand,
+  UpdateFunctionConfigurationCommand,
+} from "@aws-sdk/client-lambda";
 
 import { fatal_error, is_dir, load_config, success } from "./_utils.js";
 import type { Options } from "./types.js";
@@ -72,28 +78,72 @@ const main = async ([], opts: Options) => {
     console.log(`Skipping zip step for provided file at ${path}`);
   }
 
-  // TODO: Check if lambda exists, and update instead of creating if it exists
+  const lambdaClient = new LambdaClient({
+    region: region ?? DEFAULT_REGION,
+    profile,
+  });
+  const command = new GetFunctionCommand({ FunctionName: name });
 
-  console.log(`Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`);
+  const exists = await lambdaClient.send(command).then(
+    () => true,
+    (err) => {
+      if (err.name === "ResourceNotFoundException") {
+        return false;
+      }
+      fatal_error(err);
+    },
+  );
 
-  const lambdaClient = new LambdaClient({ region: region ?? DEFAULT_REGION, profile});
   try {
     const code = readFileSync(lambdaDir!);
 
-    const params = {
-      FunctionName: name,
-      Runtime: RUNTIME.DEFAULT_NODEJS,
-      Handler: handler,
-      Role: PIPE_ROLE,
-      Code: {
+    if (exists) {
+      console.log(
+        `Found existing deployed function, updating AWS Lambda ${name}`,
+      );
+
+      const configs = {
+        FunctionName: name,
+        Runtime: RUNTIME.DEFAULT_NODEJS,
+        Handler: handler,
+        Role: PIPE_ROLE,
+      };
+
+      const params = {
+        FunctionName: name,
         ZipFile: code,
-      }
-    };
+        DryRun: true,
+      };
 
-    const command = new CreateFunctionCommand(params);
-    const res = await lambdaClient.send(command);
+      const updateConfig = new UpdateFunctionConfigurationCommand(configs);
+      const updateCode = new UpdateFunctionCodeCommand(params);
 
-    success(`Function created successfully:", ${res.FunctionName}`);
+      const [_, res] = await Promise.all([
+        lambdaClient.send(updateConfig),
+        lambdaClient.send(updateCode),
+      ])
+
+      success(`Function updated successfully: ${res.FunctionName}`);
+    } else {
+      console.log(
+        `Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`,
+      );
+
+      const params = {
+        FunctionName: name,
+        Runtime: RUNTIME.DEFAULT_NODEJS,
+        Handler: handler,
+        Role: PIPE_ROLE,
+        Code: {
+          ZipFile: code,
+        },
+      };
+
+      const command = new CreateFunctionCommand(params);
+      const res = await lambdaClient.send(command);
+
+      success(`Function created successfully:", ${res.FunctionName}`);
+    }
   } catch (err: any) {
     fatal_error(err);
   }
