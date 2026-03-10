@@ -63,12 +63,13 @@ const main = async ([], opts: Options) => {
   }
 
   // TODO: Create a unique temporary filename that auto-cleans if zip destination path is not defined
-  if ((!zip_dir || zip_dir.length === 0) && shouldZip)
-    [
-      fatal_error(
+  if ((!zip_dir || zip_dir.length === 0) && shouldZip) {
+    fatal_error(
         "Zip directory destination path is not defined in pipe configuration",
-      ),
-    ];
+      );
+  }
+      
+  
 
   let lambdaDir;
 
