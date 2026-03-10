@@ -1,5 +1,11 @@
 import { fileURLToPath } from "node:url";
-import { existsSync, readFileSync, mkdirSync, promises, createWriteStream } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  mkdirSync,
+  promises,
+  createWriteStream,
+} from "node:fs";
 import { basename, dirname, extname } from "node:path";
 import archiver from "archiver";
 
@@ -98,7 +104,7 @@ const main = async ([], opts: Options) => {
         console.log(
           "Javascript file detected. Automatically including top level node_modules and package.json as dependencies...",
         );
-        
+
         // TODO: consider esbuild by default, with bundling node_modules as a fallback.
         // esbuild will generate considerably smaller builds.
         // Also consider ignoring certain packages and replacing them with layers in AWS.
@@ -112,16 +118,16 @@ const main = async ([], opts: Options) => {
 
       lambdaDir = `${zip_dir}/${outputFile}`;
 
-      const archive = archiver("zip");
-      archive.pipe(createWriteStream(lambdaDir))
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      archive.pipe(createWriteStream(lambdaDir));
 
       zippables.forEach((path) => {
         if (is_dir(path)) {
           archive.directory(path, path);
         } else {
-          archive.file(path, {name: basename(path)});
+          archive.file(path, { name: basename(path) });
         }
-        success(`Added ${path}`)
+        success(`Added ${path}`);
       });
 
       await archive.finalize();
@@ -168,7 +174,7 @@ const main = async ([], opts: Options) => {
 
       const params = {
         FunctionName: name,
-        ZipFile: code
+        ZipFile: code,
       };
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
