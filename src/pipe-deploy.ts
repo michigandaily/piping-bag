@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
-import { existsSync, readFileSync, mkdirSync, promises } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, promises, createWriteStream } from "node:fs";
 import { basename, dirname, extname } from "node:path";
-import AdmZip from "adm-zip";
+import archiver from "archiver";
 
 import { program } from "commander";
 
@@ -81,6 +81,8 @@ const main = async ([], opts: Options) => {
     mkdirSync(zip_dir, { recursive: true });
   }
 
+  // TODO: compare hash of any previous zip files with current (node:crypto)
+  // If the hash is the same, skip the update code step of AWS lambda
   if (shouldZip) {
     let outputFile;
 
@@ -97,6 +99,9 @@ const main = async ([], opts: Options) => {
           "Javascript file detected. Automatically including top level node_modules and package.json as dependencies...",
         );
         
+        // TODO: consider esbuild by default, with bundling node_modules as a fallback.
+        // esbuild will generate considerably smaller builds.
+        // Also consider ignoring certain packages and replacing them with layers in AWS.
         existsSync("node_modules")
           ? zippables.push("node_modules")
           : console.warn("node_modules not found for Javascript file");
@@ -105,20 +110,21 @@ const main = async ([], opts: Options) => {
           : console.warn("package.json not found for Javascript file");
       }
 
-      const zip = new AdmZip();
+      lambdaDir = `${zip_dir}/${outputFile}`;
+
+      const archive = archiver("zip");
+      archive.pipe(createWriteStream(lambdaDir))
 
       zippables.forEach((path) => {
         if (is_dir(path)) {
-          zip.addLocalFolder(path);
+          archive.directory(path, path);
         } else {
-          zip.addLocalFile(path);
+          archive.file(path, {name: basename(path)});
         }
         success(`Added ${path}`)
       });
 
-      // TODO: Use zip.toBuffer() instead
-      lambdaDir = `${zip_dir}/${outputFile}`;
-      zip.writeZip(lambdaDir);
+      await archive.finalize();
     } catch (error: any) {
       fatal_error(error);
     }
@@ -162,8 +168,7 @@ const main = async ([], opts: Options) => {
 
       const params = {
         FunctionName: name,
-        ZipFile: code,
-        DryRun: true,
+        ZipFile: code
       };
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
