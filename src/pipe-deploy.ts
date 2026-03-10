@@ -13,7 +13,13 @@ import {
   UpdateFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 
-import { fatal_error, is_dir, load_config, success } from "./_utils.js";
+import {
+  fatal_error,
+  is_js_file,
+  is_dir,
+  load_config,
+  success,
+} from "./_utils.js";
 import type { Options } from "./types.js";
 import { PIPE_ROLE, DEFAULT_REGION, RUNTIME } from "./_defaults.js";
 import { select } from "@inquirer/prompts";
@@ -65,11 +71,9 @@ const main = async ([], opts: Options) => {
   // TODO: Create a unique temporary filename that auto-cleans if zip destination path is not defined
   if ((!zip_dir || zip_dir.length === 0) && shouldZip) {
     fatal_error(
-        "Zip directory destination path is not defined in pipe configuration",
-      );
+      "Zip directory destination path is not defined in pipe configuration",
+    );
   }
-      
-  
 
   let lambdaDir;
 
@@ -86,17 +90,33 @@ const main = async ([], opts: Options) => {
         `Zipping provided file ${basename(file)} from file ${dirname(file)}`,
       );
 
-      lambdaDir = `${zip_dir}/${outputFile}`;
+      const zippables = [file];
+
+      if (is_js_file(file)) {
+        console.log(
+          "Javascript file detected. Automatically including top level node_modules and package.json as dependencies...",
+        );
+        
+        existsSync("node_modules")
+          ? zippables.push("node_modules")
+          : console.warn("node_modules not found for Javascript file");
+        existsSync("package.json")
+          ? zippables.push("package.json")
+          : console.warn("package.json not found for Javascript file");
+      }
 
       const zip = new AdmZip();
 
-      if (is_dir(file)) {
-        zip.addLocalFolder(file);
-      } else {
-        zip.addLocalFile(file);
-      }
+      zippables.forEach(() => {
+        if (is_dir(file)) {
+          zip.addLocalFolder(file);
+        } else {
+          zip.addLocalFile(file);
+        }
+      });
 
       zip.writeZip(lambdaDir);
+      lambdaDir = `${zip_dir}/${outputFile}`;
     } catch (error: any) {
       fatal_error(error);
     }

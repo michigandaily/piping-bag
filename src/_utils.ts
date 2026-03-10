@@ -16,7 +16,7 @@ import "dotenv/config";
 
 import type { Config } from "./types.js";
 
-const is_js_file = (filename: string) => {
+export const is_js_file = (filename: string) => {
   return extname(filename) === ".js";
 };
 
