@@ -34,17 +34,27 @@ const main = async ([], opts: Options) => {
       promises.glob(`**/${handler.split(".")[0]}.*`),
     );
 
-    try {
-      file = await select({
-        message:
-          "Multiple files found for provided handler, please select the file you want to deploy:",
-        choices: files,
-      });
-    } catch (error: any) {
-      if (error instanceof Error && error.name === "ExitPromptError") {
-        fatal_error("Manually exited file selection prompt, exiting process.");
+    if (files.length === 0) {
+      fatal_error(
+        "No files found for provided handler, please provide a valid path or handler in the pipe configuration.",
+      );
+    } else if (files.length === 1) {
+      file = files[0]!;
+    } else {
+      try {
+        file = await select({
+          message:
+            "Multiple files found for provided handler, please select the file you want to deploy:",
+          choices: files,
+        });
+      } catch (error: any) {
+        if (error instanceof Error && error.name === "ExitPromptError") {
+          fatal_error(
+            "Manually exited file selection prompt, exiting process.",
+          );
+        }
+        fatal_error(error);
       }
-       fatal_error(error);
     }
   }
 
