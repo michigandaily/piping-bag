@@ -107,16 +107,18 @@ const main = async ([], opts: Options) => {
 
       const zip = new AdmZip();
 
-      zippables.forEach(() => {
-        if (is_dir(file)) {
-          zip.addLocalFolder(file);
+      zippables.forEach((path) => {
+        if (is_dir(path)) {
+          zip.addLocalFolder(path);
         } else {
-          zip.addLocalFile(file);
+          zip.addLocalFile(path);
         }
+        success(`Added ${path}`)
       });
 
-      zip.writeZip(lambdaDir);
+      // TODO: Use zip.toBuffer() instead
       lambdaDir = `${zip_dir}/${outputFile}`;
+      zip.writeZip(lambdaDir);
     } catch (error: any) {
       fatal_error(error);
     }
