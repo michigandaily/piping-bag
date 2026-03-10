@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { existsSync, readFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, promises } from "node:fs";
 import { basename, dirname, extname } from "node:path";
 import AdmZip from "adm-zip";
 
@@ -16,6 +16,7 @@ import {
 import { fatal_error, is_dir, load_config, success } from "./_utils.js";
 import type { Options } from "./types.js";
 import { PIPE_ROLE, DEFAULT_REGION, RUNTIME } from "./_defaults.js";
+import { select } from "@inquirer/prompts";
 
 const self = fileURLToPath(import.meta.url);
 
@@ -27,9 +28,30 @@ const main = async ([], opts: Options) => {
 
   const { name, region, handler, path, zip_dir, profile } = config.deployment;
 
+  let file = path;
   if (!path || path.length === 0) {
-    fatal_error("File path is not defined in pipe configuration");
+    const files = await Array.fromAsync(
+      promises.glob(`**/${handler.split(".")[0]}.*`),
+    );
+
+    try {
+      file = await select({
+        message:
+          "Multiple files found for provided handler, please select the file you want to deploy:",
+        choices: files,
+      });
+    } catch (error: any) {
+      if (error instanceof Error && error.name === "ExitPromptError") {
+        fatal_error("Manually exited file selection prompt, exiting process.");
+      }
+       fatal_error(error);
+    }
   }
+
+  if (!existsSync(file)) {
+    fatal_error("File path defined in pipe configuration does not exist.");
+  }
+
   // TODO: Create a unique temporary filename that auto-cleans if zip destination path is not defined
   if ((!zip_dir || zip_dir.length === 0) && shouldZip)
     [
@@ -37,10 +59,6 @@ const main = async ([], opts: Options) => {
         "Zip directory destination path is not defined in pipe configuration",
       ),
     ];
-
-  if (!existsSync(path)) {
-    fatal_error("File path defined in pipe configuration does not exist.");
-  }
 
   let lambdaDir;
 
@@ -52,19 +70,19 @@ const main = async ([], opts: Options) => {
     let outputFile;
 
     try {
-      outputFile = `${basename(path, extname(path))}.zip`;
+      outputFile = `${basename(file, extname(file))}.zip`;
       console.log(
-        `Zipping provided file ${basename(path)} from path ${dirname(path)}`,
+        `Zipping provided file ${basename(file)} from file ${dirname(file)}`,
       );
 
       lambdaDir = `${zip_dir}/${outputFile}`;
 
       const zip = new AdmZip();
 
-      if (is_dir(path)) {
-        zip.addLocalFolder(path);
+      if (is_dir(file)) {
+        zip.addLocalFolder(file);
       } else {
-        zip.addLocalFile(path);
+        zip.addLocalFile(file);
       }
 
       zip.writeZip(lambdaDir);
@@ -74,8 +92,8 @@ const main = async ([], opts: Options) => {
 
     success(`Created ${outputFile} successfully at ${lambdaDir}`);
   } else {
-    lambdaDir = path;
-    console.log(`Skipping zip step for provided file at ${path}`);
+    lambdaDir = file;
+    console.log(`Skipping zip step for provided file at ${file}`);
   }
 
   const lambdaClient = new LambdaClient({
@@ -121,7 +139,7 @@ const main = async ([], opts: Options) => {
       const [_, res] = await Promise.all([
         lambdaClient.send(updateConfig),
         lambdaClient.send(updateCode),
-      ])
+      ]);
 
       success(`Function updated successfully: ${res.FunctionName}`);
     } else {
