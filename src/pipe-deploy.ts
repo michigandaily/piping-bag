@@ -132,8 +132,6 @@ const main = async ([], opts: Options) => {
         if (is_dir(path)) {
           archive.directory(path, path);
         } else {
-          console.log(path)
-          console.log(basename(path))
           archive.file(path, { name: basename(path) });
         }
         success(`Added ${path}`);
