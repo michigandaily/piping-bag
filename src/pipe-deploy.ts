@@ -81,11 +81,11 @@ const main = async ([], opts: Options) => {
     );
   }
 
-  let lambdaDir;
-
   if (!existsSync(zip_dir)) {
     mkdirSync(zip_dir, { recursive: true });
   }
+
+  let lambdaDir;
 
   // TODO: compare hash of any previous zip files with current (node:crypto)
   // If the hash is the same, skip the update code step of AWS lambda
