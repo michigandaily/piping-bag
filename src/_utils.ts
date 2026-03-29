@@ -9,8 +9,8 @@ import type { PathOrFileDescriptor, PathLike } from "node:fs";
 
 import { dirname, extname } from "node:path";
 import { pathToFileURL } from "node:url";
+import { styleText } from "node:util";
 
-import chalk from "chalk";
 import { findUp } from "find-up";
 import "dotenv/config";
 
@@ -62,10 +62,10 @@ export const write_file = (output: string, content: string) => {
 };
 
 export const fatal_error = (message: string) => {
-  console.error(`${chalk.red("Fatal Error: ")} ${message}`);
+  console.error(`${styleText("red", "Fatal Error: ")} ${message}`);
   process.exit(1);
 };
 
 export const success = (message: string) => {
-  console.log(chalk.green(message));
+  console.log(styleText('green', message));
 };
