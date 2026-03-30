@@ -17,7 +17,7 @@ Create a configuration file (e.g. `pipe.config.js`). The file should have a `dep
 
 ```javascript
 // pipe.config.js
-import { defineConfig } from "sink";
+import { defineConfig } from "piping-bag";
 
 export default defineConfig({
   deployment: {
