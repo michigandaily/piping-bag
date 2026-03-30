@@ -2,8 +2,51 @@
 
 > An standardized elections data pipeline for The Michigan Daily
 
+A standardized way to set up data scrapers and pull/refine data for The Michigan Daily. This can be seen as a sibling script of [michigandaily/sink](https://github.com/michigandaily/sink).
+
 > [!WARNING]  
 > This library is a work in progress
+
+## Installation
+
+Run `pnpm install -D michigandaily/piping-bag` to get the current state of `piping-bag`. The project is being developed, so there are no official releases so far.
+
+## Deployment
+
+Create a configuration file (e.g. `pipe.config.js`). The file should have a `deployment` property that outlines the necessary parameters needed to upload to AWS Lambda
+
+```javascript
+// pipe.config.js
+import { defineConfig } from "sink";
+
+export default defineConfig({
+  deployment: {
+    name: "scraper",
+    handler: "scraper.handler",
+    region: "us-east-2",
+    path: "./src/scraper.js",
+    zip_dir: "./tmp",
+    profile: "pipe",
+  }
+});
+```
+
+The `profile` property defines the name of the AWS credentials profile that you will have to populate in `~/.aws/credentials`[^note]. For daily staffers, the `profile` is `pipe` by default. Make sure to use a file with all the proper AWS Lambda and S3 permissions.
+
+```sh
+# ~/.aws/credentials
+[pipe]
+aws_access_key_id=<SECRET_KEY>
+aws_secret_access_key=<SECRET_KEY>
+```
+
+## Development
+
+To start developing, clone the repo. Run `pnpm install` to install all dependencies. `piping-bag` is written in Typescript, so all code needs to be transpiled to Javascript before it can be used and tested as a package. To watch for changes and automatically transpile the code as you develop, run `pnpm dev`.
+
+For local development, you can symlink to your local version of `pipng-bag` with `pnpm link`. Now, whenever you want to test your local `piping-bag`, you can use a test folder with a valid `package.json`. Use `pnpm link piping-bag` to link your local version as a dependency of your test folder.
+
+[^note]: For now, ask @yum25 for the pipe credentials. It should be added to 1password later.
 
 Milestones:
 
