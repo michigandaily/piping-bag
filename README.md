@@ -13,7 +13,7 @@ Run `pnpm install -D michigandaily/piping-bag` to get the current state of `pipi
 
 ## Deployment
 
-Create a configuration file (e.g. `pipe.config.js`). The file should have a `deployment` property that outlines the necessary parameters needed to upload to AWS Lambda
+Create a configuration file (e.g. `pipe.config.js`). The file should have a `deployment` property that outlines the necessary parameters needed to upload to AWS Lambda.
 
 ```javascript
 // pipe.config.js
@@ -48,7 +48,7 @@ For local development, you can symlink to your local version of `pipng-bag` with
 
 [^note]: For now, ask @yum25 for the pipe credentials. It should be added to 1password later.
 
-Milestones:
+## Milestones:
 
 - M1 - Naive upload script (.zip) to AWS Lambda and AWS EventBridge
 - M2 - Naive helper function to pipe scraper data into an AWS S3 bucket
