@@ -7,9 +7,12 @@ import {
   createWriteStream,
 } from "node:fs";
 import { basename, dirname, extname } from "node:path";
-import archiver from "archiver";
 
 import { program } from "commander";
+import { select } from "@inquirer/prompts";
+
+import archiver from "archiver";
+import esbuild from "esbuild";
 
 import {
   LambdaClient,
@@ -17,6 +20,7 @@ import {
   GetFunctionCommand,
   UpdateFunctionCodeCommand,
   UpdateFunctionConfigurationCommand,
+  waitUntilFunctionUpdatedV2,
 } from "@aws-sdk/client-lambda";
 
 import {
@@ -27,8 +31,7 @@ import {
   success,
 } from "./_utils.js";
 import type { Options } from "./types.js";
-import { PIPE_ROLE, DEFAULT_REGION, RUNTIME } from "./_defaults.js";
-import { select } from "@inquirer/prompts";
+import { PIPE_ROLE, DEFAULT_REGION, RUNTIME, BUNDLE } from "./_defaults.js";
 
 const self = fileURLToPath(import.meta.url);
 
@@ -98,22 +101,26 @@ const main = async ([], opts: Options) => {
         `Zipping provided file ${basename(file)} from file ${dirname(file)}`,
       );
 
-      const zippables = [file];
+      const zippables = [];
 
       if (is_js_file(file)) {
         console.log(
-          "Javascript file detected. Automatically including top level node_modules and package.json as dependencies...",
+          "Javascript file detected. Bundling via esbuild to include dependencies...",
         );
 
-        // TODO: consider esbuild by default, with bundling node_modules as a fallback.
-        // esbuild will generate considerably smaller builds.
-        // Also consider ignoring certain packages and replacing them with layers in AWS.
-        existsSync("node_modules")
-          ? zippables.push("node_modules")
-          : console.warn("node_modules not found for Javascript file");
-        existsSync("package.json")
-          ? zippables.push("package.json")
-          : console.warn("package.json not found for Javascript file");
+        const bundleFile = `dist/${basename(file, extname(file))}.js`;
+
+        await esbuild.build({
+          entryPoints: [file],
+          bundle: true,
+          platform: "node",
+          target: BUNDLE.DEFAULT_NODE_TARGET,
+          outfile: bundleFile,
+        });
+
+        zippables.push(bundleFile);
+      } else {
+        zippables.push(file);
       }
 
       lambdaDir = `${zip_dir}/${outputFile}`;
@@ -180,10 +187,21 @@ const main = async ([], opts: Options) => {
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
       const updateCode = new UpdateFunctionCodeCommand(params);
 
-      const [_, res] = await Promise.all([
-        lambdaClient.send(updateConfig),
-        lambdaClient.send(updateCode),
-      ]);
+      const _ = await lambdaClient.send(updateConfig);
+
+      await waitUntilFunctionUpdatedV2(
+        { client: lambdaClient, maxWaitTime: 60 },
+        { FunctionName: name },
+      ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
+        switch (e.state) {
+          case "TIMEOUT":
+            fatal_error("Function update to AWS Lambda timed out, please try again.");
+          case "FAILURE":
+            fatal_error("Function failed to update to AWS Lambda.");
+        }
+      });
+
+      const res = await lambdaClient.send(updateCode);
 
       success(`Function updated successfully: ${res.FunctionName}`);
     } else {
