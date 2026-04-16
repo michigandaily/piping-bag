@@ -211,21 +211,8 @@ const main = async ([], opts: Options) => {
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
       const updateCode = new UpdateFunctionCodeCommand(params);
 
-      const _ = await lambdaClient.send(updateConfig);
-
-      await waitUntilFunctionUpdatedV2(
-        { client: lambdaClient, maxWaitTime: 60 },
-        { FunctionName: name },
-      ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
-        switch (e.state) {
-          case "TIMEOUT":
-            fatal_error("Function update to AWS Lambda timed out, please try again.");
-          case "FAILURE":
-            fatal_error("Function failed to update to AWS Lambda.");
-        }
-      });
-
-      const res = await lambdaClient.send(updateCode);
+      await waitUntilUpdated(() => lambdaClient.send(updateConfig));
+      const res = await waitUntilUpdated(() => lambdaClient.send(updateCode));
 
       success(`Function updated successfully: ${res.FunctionName}`);
     } else {
