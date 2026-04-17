@@ -7,6 +7,7 @@ import {
   createWriteStream,
 } from "node:fs";
 import { basename, dirname, extname } from "node:path";
+import { createHash } from "node:crypto";
 
 import { program } from "commander";
 import { select } from "@inquirer/prompts";
@@ -21,6 +22,7 @@ import {
   UpdateFunctionCodeCommand,
   UpdateFunctionConfigurationCommand,
   waitUntilFunctionUpdatedV2,
+  GetFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 
 import {
@@ -85,7 +87,7 @@ const main = async ([], opts: Options) => {
     mkdirSync(zip_dir, { recursive: true });
   }
 
-  let lambdaDir;
+  let lambdaDir: string;
 
   // TODO: compare hash of any previous zip files with current (node:crypto)
   // If the hash is the same, skip the update code step of AWS lambda
@@ -134,9 +136,9 @@ const main = async ([], opts: Options) => {
 
       zippables.forEach((path) => {
         if (is_dir(path)) {
-          archive.directory(path, path);
+          archive.directory(path, path, { date: new Date('2000-01-01Z') });
         } else {
-          archive.file(path, { name: basename(path) });
+          archive.file(path, { name: basename(path), date: new Date('2000-01-01Z') });
         }
         success(`Added ${path}`);
       });
@@ -146,7 +148,7 @@ const main = async ([], opts: Options) => {
       fatal_error(error);
     }
 
-    success(`Created ${outputFile} successfully at ${lambdaDir}`);
+    success(`Created ${outputFile} successfully at ${lambdaDir!}`);
   } else {
     lambdaDir = file;
     console.log(`Skipping zip step for provided file at ${file}`);
@@ -176,8 +178,10 @@ const main = async ([], opts: Options) => {
   }
 
   const command = new GetFunctionCommand({ FunctionName: name });
+  const readHashCommand = new GetFunctionConfigurationCommand({
+    FunctionName: name
+  });
 
-  let functionArn: string | undefined;
   const exists = await lambdaClient.send(command).then(
     () => true,
     (err) => {
@@ -196,6 +200,24 @@ const main = async ([], opts: Options) => {
         `Found existing deployed function, updating AWS Lambda ${name}`,
       );
 
+      const params = {
+        FunctionName: name,
+        ZipFile: code,
+      };
+
+      const hash = createHash('sha256').update(code).digest('base64')
+      const remoteHash = await lambdaClient.send(readHashCommand).then(({ CodeSha256 }) => CodeSha256)
+
+      if (hash !== remoteHash) {
+        const updateCode = new UpdateFunctionCodeCommand(params);
+        const res = await waitUntilUpdated(() => lambdaClient.send(updateCode));
+        success(`Function updated successfully: ${res.FunctionName}`);
+      } else {
+        console.log(`No detected code changes for function ${name}. Skipping code update step.`)
+      }
+
+      console.log(`Updating configs for AWS Lambda ${name}`)
+
       const configs = {
         FunctionName: name,
         Runtime: RUNTIME.DEFAULT_NODEJS,
@@ -203,18 +225,9 @@ const main = async ([], opts: Options) => {
         Role: PIPE_ROLE,
       };
 
-      const params = {
-        FunctionName: name,
-        ZipFile: code,
-      };
-
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
-      const updateCode = new UpdateFunctionCodeCommand(params);
-
-      await waitUntilUpdated(() => lambdaClient.send(updateConfig));
-      const res = await waitUntilUpdated(() => lambdaClient.send(updateCode));
-
-      success(`Function updated successfully: ${res.FunctionName}`);
+      const res = await waitUntilUpdated(() => lambdaClient.send(updateConfig));
+      success(`Configuration updated successfully: ${res.FunctionName}`)
     } else {
       console.log(
         `Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`,
