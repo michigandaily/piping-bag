@@ -7,6 +7,7 @@ import {
   createWriteStream,
 } from "node:fs";
 import { basename, dirname, extname } from "node:path";
+import { createHash } from "node:crypto";
 
 import { program } from "commander";
 import { select } from "@inquirer/prompts";
@@ -21,6 +22,7 @@ import {
   UpdateFunctionCodeCommand,
   UpdateFunctionConfigurationCommand,
   waitUntilFunctionUpdatedV2,
+  GetFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 
 import {
@@ -37,9 +39,6 @@ const self = fileURLToPath(import.meta.url);
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
-
-  const shouldZip = opts.zip;
-  const manualPrompt = opts.yes === undefined;
 
   const { name, region, handler, path, zip_dir, profile } = config.deployment;
 
@@ -78,7 +77,7 @@ const main = async ([], opts: Options) => {
   }
 
   // TODO: Create a unique temporary filename that auto-cleans if zip destination path is not defined
-  if ((!zip_dir || zip_dir.length === 0) && shouldZip) {
+  if (!zip_dir || zip_dir.length === 0) {
     fatal_error(
       "Zip directory destination path is not defined in pipe configuration",
     );
@@ -88,10 +87,17 @@ const main = async ([], opts: Options) => {
     mkdirSync(zip_dir, { recursive: true });
   }
 
-  let lambdaDir;
+  let lambdaDir: string;
 
   // TODO: compare hash of any previous zip files with current (node:crypto)
   // If the hash is the same, skip the update code step of AWS lambda
+  let shouldZip = true;
+
+  // Check if the provided file is already a zip
+  if (extname(file) === '.zip') {
+    shouldZip = false;
+  }
+
   if (shouldZip) {
     let outputFile;
 
@@ -142,7 +148,7 @@ const main = async ([], opts: Options) => {
       fatal_error(error);
     }
 
-    success(`Created ${outputFile} successfully at ${lambdaDir}`);
+    success(`Created ${outputFile} successfully at ${lambdaDir!}`);
   } else {
     lambdaDir = file;
     console.log(`Skipping zip step for provided file at ${file}`);
@@ -152,7 +158,29 @@ const main = async ([], opts: Options) => {
     region: region ?? DEFAULT_REGION,
     profile,
   });
+
+  async function waitUntilUpdated<T>(lambdaClientCommand: () => Promise<T>): Promise<T> {
+    const res = await lambdaClientCommand();
+
+    await waitUntilFunctionUpdatedV2(
+      { client: lambdaClient, maxWaitTime: 60 },
+      { FunctionName: name },
+    ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
+      switch (e.state) {
+        case "TIMEOUT":
+          fatal_error("Function update to AWS Lambda timed out, please try again.");
+        case "FAILURE":
+          fatal_error("Function failed to update to AWS Lambda.");
+      }
+    });
+
+    return res;
+  }
+
   const command = new GetFunctionCommand({ FunctionName: name });
+  const readHashCommand = new GetFunctionConfigurationCommand({
+    FunctionName: name
+  });
 
   const exists = await lambdaClient.send(command).then(
     () => true,
@@ -172,6 +200,24 @@ const main = async ([], opts: Options) => {
         `Found existing deployed function, updating AWS Lambda ${name}`,
       );
 
+      const params = {
+        FunctionName: name,
+        ZipFile: code,
+      };
+
+      const hash = createHash('sha256').update(code).digest('base64')
+      const remoteHash = await lambdaClient.send(readHashCommand).then(({ CodeSha256 }) => CodeSha256)
+
+      if (hash !== remoteHash) {
+        const updateCode = new UpdateFunctionCodeCommand(params);
+        const res = await waitUntilUpdated(() => lambdaClient.send(updateCode));
+        success(`Function updated successfully: ${res.FunctionName}`);
+      } else {
+        console.log(`No detected code changes for function ${name}. Skipping code update step.`)
+      }
+
+      console.log(`Updating configs for AWS Lambda ${name}`)
+
       const configs = {
         FunctionName: name,
         Runtime: RUNTIME.DEFAULT_NODEJS,
@@ -179,31 +225,9 @@ const main = async ([], opts: Options) => {
         Role: PIPE_ROLE,
       };
 
-      const params = {
-        FunctionName: name,
-        ZipFile: code,
-      };
-
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
-      const updateCode = new UpdateFunctionCodeCommand(params);
-
-      const _ = await lambdaClient.send(updateConfig);
-
-      await waitUntilFunctionUpdatedV2(
-        { client: lambdaClient, maxWaitTime: 60 },
-        { FunctionName: name },
-      ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
-        switch (e.state) {
-          case "TIMEOUT":
-            fatal_error("Function update to AWS Lambda timed out, please try again.");
-          case "FAILURE":
-            fatal_error("Function failed to update to AWS Lambda.");
-        }
-      });
-
-      const res = await lambdaClient.send(updateCode);
-
-      success(`Function updated successfully: ${res.FunctionName}`);
+      const res = await waitUntilUpdated(() => lambdaClient.send(updateConfig));
+      success(`Configuration updated successfully: ${res.FunctionName}`)
     } else {
       console.log(
         `Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`,
@@ -233,11 +257,6 @@ if (process.argv[1] === self) {
   program
     .version("0.0.1")
     .option("-c, --config <path>", "path to config file")
-    .option(
-      "--nz, --no-zip",
-      "does not zip the file provided by path, making path the zip directory",
-    )
-    .option("-y, --yes", "answer yes to prompts")
     .parse();
 
   main(program.args, program.opts());
