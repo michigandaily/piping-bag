@@ -136,9 +136,9 @@ const main = async ([], opts: Options) => {
 
       zippables.forEach((path) => {
         if (is_dir(path)) {
-          archive.directory(path, path, { date: new Date('2000-01-01Z') });
+          archive.directory(path, path);
         } else {
-          archive.file(path, { name: basename(path), date: new Date('2000-01-01Z') });
+          archive.file(path, { name: basename(path) });
         }
         success(`Added ${path}`);
       });
