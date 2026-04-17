@@ -26,11 +26,12 @@ import {
 } from "@aws-sdk/client-lambda";
 
 import {
-  fatal_error,
   is_js_file,
   is_dir,
   load_config,
   success,
+  info,
+  fatal_error,
 } from "./_utils.js";
 import type { Options } from "./types.js";
 import { PIPE_ROLE, DEFAULT_REGION, RUNTIME, BUNDLE } from "./_defaults.js";
@@ -136,11 +137,11 @@ const main = async ([], opts: Options) => {
 
       zippables.forEach((path) => {
         if (is_dir(path)) {
-          archive.directory(path, path);
+          archive.directory(path, path, { date: new Date('2000-01-01Z') });
         } else {
-          archive.file(path, { name: basename(path) });
+          archive.file(path, { name: basename(path), date: new Date('2000-01-01Z') });
         }
-        success(`Added ${path}`);
+        info(`Added ${path}`);
       });
 
       await archive.finalize();

@@ -20,11 +20,11 @@ export const is_js_file = (filename: string) => {
   return extname(filename) === ".js";
 };
 
-export const read_json_config = (path: PathOrFileDescriptor): {config: Config} => {
+export const read_json_config = (path: PathOrFileDescriptor): { config: Config } => {
   return { config: JSON.parse(readFileSync(path).toString()) };
 };
 
-export const read_js_config = async (path: string): Promise<{config: Config}> => {
+export const read_js_config = async (path: string): Promise<{ config: Config }> => {
   const config = (await import(pathToFileURL(path).toString())).default;
   return { config };
 };
@@ -68,4 +68,8 @@ export const fatal_error = (message: string) => {
 
 export const success = (message: string) => {
   console.log(styleText('green', message));
+};
+
+export const info = (message: string) => {
+  console.log(styleText('cyan', message));
 };
