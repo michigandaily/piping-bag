@@ -1,4 +1,4 @@
-import { defineConfig } from "sink";
+import { defineConfig } from "piping-bag";
 
 export default defineConfig({
   deployment: {
@@ -9,4 +9,10 @@ export default defineConfig({
     zip_dir: "./tmp",
     profile: "pipe",
   },
+  schedule: {
+    start: new Date(),
+    end: new Date(),
+    rate: "rate(5 minutes)"
+    // rate: 'cron(0 12 * * ? *)' // you can also use cron expressions
+  }
 });

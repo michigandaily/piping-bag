@@ -34,7 +34,7 @@ import {
   fatal_error,
 } from "./_utils.js";
 import type { Options } from "./types.js";
-import { PIPE_ROLE, DEFAULT_REGION, RUNTIME, BUNDLE } from "./_defaults.js";
+import { DEFAULT_REGION, RUNTIME, BUNDLE } from "./_defaults.js";
 
 const self = fileURLToPath(import.meta.url);
 
@@ -223,7 +223,7 @@ const main = async ([], opts: Options) => {
         FunctionName: name,
         Runtime: RUNTIME.DEFAULT_NODEJS,
         Handler: handler,
-        Role: PIPE_ROLE,
+        Role: process.env.PIPE_ROLE,
       };
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
@@ -238,7 +238,7 @@ const main = async ([], opts: Options) => {
         FunctionName: name,
         Runtime: RUNTIME.DEFAULT_NODEJS,
         Handler: handler,
-        Role: PIPE_ROLE,
+        Role: process.env.PIPE_ROLE,
         Code: {
           ZipFile: code,
         },
@@ -252,6 +252,8 @@ const main = async ([], opts: Options) => {
   } catch (err: any) {
     fatal_error(err);
   }
+
+  console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
 };
 
 if (process.argv[1] === self) {

@@ -7,6 +7,11 @@ export type Config = {
     zip_dir: string;
     profile: string;
   };
+  schedule: {
+    start: Date;
+    end: Date;
+    rate: string;
+  }
 };
 
 export type Options = {
