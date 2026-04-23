@@ -8,11 +8,13 @@ export default defineConfig({
     path: "./src/scraper.js",
     zip_dir: "./tmp",
     profile: "pipe",
+    pipe_role: "pipe-lambda",
   },
   schedule: {
     start: new Date(),
     end: new Date(),
-    rate: "rate(5 minutes)"
+    rate: "rate(5 minutes)",
     // rate: 'cron(0 12 * * ? *)' // you can also use cron expressions
+    scheduler_role: "pipe-eventbridge",
   }
 });

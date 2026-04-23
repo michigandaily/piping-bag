@@ -15,6 +15,7 @@ import { select } from "@inquirer/prompts";
 import archiver from "archiver";
 import esbuild from "esbuild";
 
+import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
 import {
   LambdaClient,
   CreateFunctionCommand,
@@ -32,16 +33,41 @@ import {
   success,
   info,
   fatal_error,
+  warn,
 } from "./_utils.js";
 import type { Options } from "./types.js";
-import { DEFAULT_REGION, RUNTIME, BUNDLE } from "./_defaults.js";
+import { DEFAULT_REGION, RUNTIME, BUNDLE, DEFAULT_PIPE_ROLE } from "./_defaults.js";
+import { fromEnv, fromIni } from "@aws-sdk/credential-providers";
 
 const self = fileURLToPath(import.meta.url);
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
-  const { name, region, handler, path, zip_dir, profile } = config.deployment;
+  const { name, region, handler, path, zip_dir, profile, pipe_role } = config.deployment;
+
+  let credentials: ReturnType<typeof fromIni>
+
+  if (profile) {
+    credentials = fromIni({ profile });
+  } else {
+    console.log(
+      "no AWS credentials profile was specified. falling back to environment variables."
+    );
+    await import("dotenv/config");
+
+    if (
+      !!process.env.AWS_ACCESS_KEY_ID &&
+      !!process.env.AWS_SECRET_ACCESS_KEY
+    ) {
+      credentials = fromEnv();
+    } else {
+      fatal_error(
+        "no AWS credentials were specified in the environment variables. exiting."
+      );
+      return
+    }
+  }
 
   let file = path;
   if (!path || path.length === 0) {
@@ -90,16 +116,7 @@ const main = async ([], opts: Options) => {
 
   let lambdaDir: string;
 
-  // TODO: compare hash of any previous zip files with current (node:crypto)
-  // If the hash is the same, skip the update code step of AWS lambda
-  let shouldZip = true;
-
-  // Check if the provided file is already a zip
-  if (extname(file) === '.zip') {
-    shouldZip = false;
-  }
-
-  if (shouldZip) {
+  if (extname(file) !== '.zip') {
     let outputFile;
 
     try {
@@ -157,7 +174,7 @@ const main = async ([], opts: Options) => {
 
   const lambdaClient = new LambdaClient({
     region: region ?? DEFAULT_REGION,
-    profile,
+    credentials,
   });
 
   async function waitUntilUpdated<T>(lambdaClientCommand: () => Promise<T>): Promise<T> {
@@ -194,6 +211,22 @@ const main = async ([], opts: Options) => {
   );
 
   try {
+    const roleClient = new IAMClient({ region, credentials });
+    const pipeRole = await roleClient.send(new GetRoleCommand({
+      RoleName: pipe_role ?? DEFAULT_PIPE_ROLE
+    })).then(({ Role }) => {
+      if (Role?.Arn) {
+        return Role.Arn;
+      }
+      throw Error("piping-bag error: Invalid pipeRoleArn found.")
+    }).catch((error: any) => {
+      if (process.env.PIPE_ROLE && process.env.PIPE_ROLE.length > 0) {
+        warn("Fetching pipe role failed. Falling back to environment variables...")
+        return process.env.PIPE_ROLE;
+      }
+      fatal_error(error);
+    })
+
     const code = readFileSync(lambdaDir!);
 
     if (exists) {
@@ -223,7 +256,7 @@ const main = async ([], opts: Options) => {
         FunctionName: name,
         Runtime: RUNTIME.DEFAULT_NODEJS,
         Handler: handler,
-        Role: process.env.PIPE_ROLE,
+        Role: pipeRole,
       };
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
@@ -238,7 +271,7 @@ const main = async ([], opts: Options) => {
         FunctionName: name,
         Runtime: RUNTIME.DEFAULT_NODEJS,
         Handler: handler,
-        Role: process.env.PIPE_ROLE,
+        Role: pipeRole,
         Code: {
           ZipFile: code,
         },

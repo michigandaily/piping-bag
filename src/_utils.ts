@@ -73,3 +73,7 @@ export const success = (message: string) => {
 export const info = (message: string) => {
   console.log(styleText('cyan', message));
 };
+
+export const warn = (message: string) => {
+  console.warn(styleText("yellow", message));
+}
