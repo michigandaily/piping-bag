@@ -15,7 +15,7 @@ import { select } from "@inquirer/prompts";
 import archiver from "archiver";
 import esbuild from "esbuild";
 
-import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
+import { IAMClient } from "@aws-sdk/client-iam";
 import {
   LambdaClient,
   CreateFunctionCommand,
@@ -33,11 +33,13 @@ import {
   success,
   info,
   fatal_error,
-  warn,
+  get_aws_role,
+  get_aws_credentials,
 } from "./_utils.js";
 import type { Options } from "./types.js";
-import { DEFAULT_REGION, RUNTIME, BUNDLE, DEFAULT_PIPE_ROLE } from "./_defaults.js";
-import { fromEnv, fromIni } from "@aws-sdk/credential-providers";
+import { DEFAULT_REGION, RUNTIME, BUNDLE, DEFAULT_PIPE_ROLE, DEFAULT_SCHEDULER_ROLE } from "./_defaults.js";
+
+import { attachScheduler } from "./pipe-schedule.js";
 
 const self = fileURLToPath(import.meta.url);
 
@@ -45,29 +47,9 @@ const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
   const { name, region, handler, path, zip_dir, profile, pipe_role } = config.deployment;
+  const { start, end, rate, scheduler_role } = config.schedule;
 
-  let credentials: ReturnType<typeof fromIni>
-
-  if (profile) {
-    credentials = fromIni({ profile });
-  } else {
-    console.log(
-      "no AWS credentials profile was specified. falling back to environment variables."
-    );
-    await import("dotenv/config");
-
-    if (
-      !!process.env.AWS_ACCESS_KEY_ID &&
-      !!process.env.AWS_SECRET_ACCESS_KEY
-    ) {
-      credentials = fromEnv();
-    } else {
-      fatal_error(
-        "no AWS credentials were specified in the environment variables. exiting."
-      );
-      return
-    }
-  }
+  const credentials = await get_aws_credentials(profile)
 
   let file = path;
   if (!path || path.length === 0) {
@@ -172,10 +154,8 @@ const main = async ([], opts: Options) => {
     console.log(`Skipping zip step for provided file at ${file}`);
   }
 
-  const lambdaClient = new LambdaClient({
-    region: region ?? DEFAULT_REGION,
-    credentials,
-  });
+  const lambdaClient = new LambdaClient({ region: region ?? DEFAULT_REGION, credentials });
+  const roleClient = new IAMClient({ region: region ?? DEFAULT_REGION, credentials });
 
   async function waitUntilUpdated<T>(lambdaClientCommand: () => Promise<T>): Promise<T> {
     const res = await lambdaClientCommand();
@@ -202,31 +182,17 @@ const main = async ([], opts: Options) => {
 
   const exists = await lambdaClient.send(command).then(
     () => true,
-    (err) => {
-      if (err.name === "ResourceNotFoundException") {
+    (error) => {
+      if (error.name === "ResourceNotFoundException") {
         return false;
       }
-      fatal_error(err);
+      fatal_error(error);
     },
   );
 
+  let arn: string | undefined;
   try {
-    const roleClient = new IAMClient({ region, credentials });
-    const pipeRole = await roleClient.send(new GetRoleCommand({
-      RoleName: pipe_role ?? DEFAULT_PIPE_ROLE
-    })).then(({ Role }) => {
-      if (Role?.Arn) {
-        return Role.Arn;
-      }
-      throw Error("piping-bag error: Invalid pipeRoleArn found.")
-    }).catch((error: any) => {
-      if (process.env.PIPE_ROLE && process.env.PIPE_ROLE.length > 0) {
-        warn("Fetching pipe role failed. Falling back to environment variables...")
-        return process.env.PIPE_ROLE;
-      }
-      fatal_error(error);
-    })
-
+    const pipeRole = await get_aws_role(roleClient, pipe_role, DEFAULT_PIPE_ROLE)
     const code = readFileSync(lambdaDir!);
 
     if (exists) {
@@ -261,6 +227,8 @@ const main = async ([], opts: Options) => {
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
       const res = await waitUntilUpdated(() => lambdaClient.send(updateConfig));
+      arn = res?.FunctionArn
+
       success(`Configuration updated successfully: ${res.FunctionName}`)
     } else {
       console.log(
@@ -279,14 +247,22 @@ const main = async ([], opts: Options) => {
 
       const command = new CreateFunctionCommand(params);
       const res = await lambdaClient.send(command);
+      arn = res?.FunctionArn
 
       success(`Function created successfully:", ${res.FunctionName}`);
     }
-  } catch (err: any) {
-    fatal_error(err);
+  } catch (error: any) {
+    fatal_error(error);
   }
 
   console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
+  try {
+    const schedulerRole = await get_aws_role(roleClient, scheduler_role, DEFAULT_SCHEDULER_ROLE);
+    // await attachScheduler({ arn: arn!, role: schedulerRole, region: region ?? DEFAULT_REGION, start, end, rate });
+  } catch (error: any) {
+    fatal_error(error);
+  }
+
 };
 
 if (process.argv[1] === self) {

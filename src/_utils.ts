@@ -14,7 +14,47 @@ import { styleText } from "node:util";
 import { findUp } from "find-up";
 import "dotenv/config";
 
+import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
+import { fromEnv, fromIni } from "@aws-sdk/credential-providers";
+import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
+
 import type { Config } from "./types.js";
+
+export const get_aws_role = async (client: IAMClient, role_name: string, default_name: string) => (
+  await client.send(new GetRoleCommand({
+    RoleName: role_name ?? default_name
+  })).then(({ Role }) => {
+    if (Role?.Arn) {
+      return Role.Arn;
+    }
+    throw Error("piping-bag error: Invalid pipeRoleArn found.")
+  }).catch((error: any) => {
+    if (process.env[role_name] && process.env[role_name].length > 0) {
+      warn(`Fetching ${role_name} failed. Falling back to environment variables...`)
+      return process.env[role_name];
+    }
+    throw Error(error);
+  })
+)
+
+export const get_aws_credentials = async (profile: string): Promise<AwsCredentialIdentityProvider> => {
+  if (profile) {
+    return fromIni({ profile });
+  } else {
+    warn(
+      "no AWS credentials profile was specified. falling back to environment variables."
+    );
+
+    if (
+      !!process.env.AWS_ACCESS_KEY_ID &&
+      !!process.env.AWS_SECRET_ACCESS_KEY
+    ) {
+      return fromEnv();
+    } else {
+      throw Error("no AWS credentials were specified in the environment variables. exiting.");
+    }
+  }
+}
 
 export const is_js_file = (filename: string) => {
   return extname(filename) === ".js";
