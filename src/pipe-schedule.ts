@@ -2,34 +2,55 @@ import { fileURLToPath } from "node:url";
 import { program } from "commander";
 
 import { IAMClient } from "@aws-sdk/client-iam";
-import { CreateScheduleCommand, SchedulerClient } from "@aws-sdk/client-scheduler";
+import { CreateScheduleCommand, GetScheduleCommand, SchedulerClient, UpdateScheduleCommand, type CreateScheduleCommandInput, type UpdateScheduleCommandInput } from "@aws-sdk/client-scheduler";
 import { GetFunctionCommand, LambdaClient } from "@aws-sdk/client-lambda";
 
 import { fatal_error, get_aws_credentials, get_aws_role, load_config } from "./_utils.js";
 import type { Options } from "./types.js";
 import { DEFAULT_REGION, DEFAULT_SCHEDULER_ROLE } from "./_defaults.js";
 
-export async function attachScheduler({ arn, role, region, start, end, rate }:
-  { arn: string, role: string, region: string, start: Date, end: Date, rate: string }) {
+type ScheduleCommandInput = CreateScheduleCommandInput & UpdateScheduleCommandInput
+
+export async function attachScheduler({ arn, name, role, region, start, end, rate }:
+  { arn: string, name: string, role: string, region: string, start: Date, end: Date, rate: string }) {
   const schedulerClient = new SchedulerClient({ region })
-  try {
-    const res = await schedulerClient.send(new CreateScheduleCommand({
-      Name: `${arn}-schedule`,
-      ScheduleExpression: rate,
-      StartDate: start,
-      EndDate: end,
-      Target: {
-        Arn: arn,
-        RoleArn: role,
+  const schedulerName = `${name}-${region}-schedule`;
+
+  const exists = await schedulerClient.send(
+    new GetScheduleCommand({ Name: schedulerName })).then(() => true,
+      (error) => {
+        if (error.name === "ScheduleNotFoundException") {
+          return false;
+        }
+        fatal_error(error);
       },
-      FlexibleTimeWindow: { Mode: 'OFF' }
-    }))
+    )
+
+  const params: ScheduleCommandInput = {
+    Name: schedulerName,
+    ScheduleExpression: rate,
+    StartDate: start,
+    EndDate: end,
+    Target: {
+      Arn: arn,
+      RoleArn: role,
+    },
+    FlexibleTimeWindow: { Mode: 'OFF' }
+  }
+
+  try {
+    let command;
+    if (exists) {
+      command = new UpdateScheduleCommand(params);
+    } else {
+      command = new CreateScheduleCommand(params);
+    }
+    return await schedulerClient.send(command);
   } catch (error: any) {
     fatal_error(error)
   }
 }
 
-const self = fileURLToPath(import.meta.url);
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
@@ -54,8 +75,18 @@ const main = async ([], opts: Options) => {
   );
 
   const schedulerRole = await get_aws_role(roleClient, scheduler_role, DEFAULT_SCHEDULER_ROLE);
-  await attachScheduler({ arn: arn!, role: schedulerRole, region: region ?? DEFAULT_REGION, start, end, rate })
+  await attachScheduler({
+    arn: arn!,
+    name,
+    role: schedulerRole,
+    region: region ?? DEFAULT_REGION,
+    start,
+    end,
+    rate
+  })
 }
+
+const self = fileURLToPath(import.meta.url);
 if (process.argv[1] === self) {
   program
     .version("0.0.1")
