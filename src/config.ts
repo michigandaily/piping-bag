@@ -8,3 +8,4 @@ import type { Config } from "./types.ts";
 export function defineConfig(configuration: Config) {
   return configuration;
 }
+

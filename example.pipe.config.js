@@ -16,5 +16,5 @@ export default defineConfig({
     rate: "rate(5 minutes)",
     // rate: 'cron(0 12 * * ? *)' // you can also use cron expressions
     scheduler_role: "pipe-eventbridge",
-  }
+  },
 });

@@ -7,11 +7,11 @@ export default defineConfig({
     "src/pipe-deploy.ts",
     "src/pipe-schedule.ts",
     "src/lib/schema.ts",
-    "src/types.ts"
+    "src/types.ts",
   ],
   format: ["cjs", "esm"],
   external: ["commander"],
   dts: true,
   clean: true,
-  platform: 'node'
+  platform: "node",
 });

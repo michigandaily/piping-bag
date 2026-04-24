@@ -13,7 +13,7 @@ export type Config = {
     end: Date;
     rate: string;
     scheduler_role: string;
-  }
+  };
 };
 
 export type Options = {

@@ -3,7 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   writeFileSync,
-  statSync
+  statSync,
 } from "node:fs";
 import type { PathOrFileDescriptor, PathLike } from "node:fs";
 
@@ -20,29 +20,37 @@ import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
 import type { Config } from "./types.js";
 
-export const get_aws_role = async (client: IAMClient, role_name: string, default_name: string) => (
-  await client.send(new GetRoleCommand({
-    RoleName: role_name ?? default_name
-  })).then(({ Role }) => {
-    if (Role?.Arn) {
-      return Role.Arn;
-    }
-    throw Error("piping-bag error: Invalid pipeRoleArn found.")
-  }).catch((error: any) => {
-    if (process.env[role_name] && process.env[role_name].length > 0) {
-      warn(`Fetching ${role_name} failed. Falling back to environment variables...`)
-      return process.env[role_name];
-    }
-    throw Error(error);
-  })
-)
+export const get_aws_role = async (
+  client: IAMClient,
+  role_name: string,
+  default_name: string,
+) =>
+  await client
+    .send(new GetRoleCommand({ RoleName: role_name ?? default_name }))
+    .then(({ Role }) => {
+      if (Role?.Arn) {
+        return Role.Arn;
+      }
+      throw Error("piping-bag error: Invalid pipeRoleArn found.");
+    })
+    .catch((error: any) => {
+      if (process.env[role_name] && process.env[role_name].length > 0) {
+        warn(
+          `Fetching ${role_name} failed. Falling back to environment variables...`,
+        );
+        return process.env[role_name];
+      }
+      throw Error(error);
+    });
 
-export const get_aws_credentials = async (profile: string): Promise<AwsCredentialIdentityProvider> => {
+export const get_aws_credentials = async (
+  profile: string,
+): Promise<AwsCredentialIdentityProvider> => {
   if (profile) {
     return fromIni({ profile });
   } else {
     warn(
-      "no AWS credentials profile was specified. falling back to environment variables."
+      "no AWS credentials profile was specified. falling back to environment variables.",
     );
 
     if (
@@ -51,25 +59,32 @@ export const get_aws_credentials = async (profile: string): Promise<AwsCredentia
     ) {
       return fromEnv();
     } else {
-      throw Error("no AWS credentials were specified in the environment variables. exiting.");
+      throw Error(
+        "no AWS credentials were specified in the environment variables. exiting.",
+      );
     }
   }
-}
+};
 
 export const is_js_file = (filename: string) => {
   return extname(filename) === ".js";
 };
 
-export const read_json_config = (path: PathOrFileDescriptor): { config: Config } => {
+export const read_json_config = (
+  path: PathOrFileDescriptor,
+): { config: Config } => {
   return { config: JSON.parse(readFileSync(path).toString()) };
 };
 
-export const read_js_config = async (path: string): Promise<{ config: Config }> => {
+export const read_js_config = async (
+  path: string,
+): Promise<{ config: Config }> => {
   const config = (await import(pathToFileURL(path).toString())).default;
   return { config };
 };
 
-export const has_filled_props = (o: Object) => Object.values(o).every((v) => v.length);
+export const has_filled_props = (o: Object) =>
+  Object.values(o).every((v) => v.length);
 
 export const is_dir = (dir: PathLike) => statSync(dir).isDirectory();
 
@@ -107,13 +122,13 @@ export const fatal_error = (message: string) => {
 };
 
 export const success = (message: string) => {
-  console.log(styleText('green', message));
+  console.log(styleText("green", message));
 };
 
 export const info = (message: string) => {
-  console.log(styleText('cyan', message));
+  console.log(styleText("cyan", message));
 };
 
 export const warn = (message: string) => {
   console.warn(styleText("yellow", message));
-}
+};

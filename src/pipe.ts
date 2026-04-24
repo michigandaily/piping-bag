@@ -6,6 +6,9 @@ program
   .name("pipe")
   .description("Data collection scripts")
   .command("deploy", "Deploys a custom script to AWS Lambda")
-  .command("schedule", "Schedules a deployed AWS Lambda function to run at a specific rate")
+  .command(
+    "schedule",
+    "Schedules a deployed AWS Lambda function to run at a specific rate",
+  );
 
 program.parse(process.argv);
