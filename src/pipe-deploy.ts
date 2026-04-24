@@ -41,8 +41,6 @@ import { DEFAULT_REGION, RUNTIME, BUNDLE, DEFAULT_PIPE_ROLE, DEFAULT_SCHEDULER_R
 
 import { attachScheduler } from "./pipe-schedule.js";
 
-const self = fileURLToPath(import.meta.url);
-
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
@@ -265,6 +263,7 @@ const main = async ([], opts: Options) => {
 
 };
 
+const self = fileURLToPath(import.meta.url);
 if (process.argv[1] === self) {
   program
     .version("0.0.1")
