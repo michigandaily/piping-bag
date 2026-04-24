@@ -37,17 +37,24 @@ import {
   get_aws_credentials,
 } from "./_utils.js";
 import type { Options } from "./types.js";
-import { DEFAULT_REGION, RUNTIME, BUNDLE, DEFAULT_PIPE_ROLE, DEFAULT_SCHEDULER_ROLE } from "./_defaults.js";
+import {
+  DEFAULT_REGION,
+  RUNTIME,
+  BUNDLE,
+  DEFAULT_PIPE_ROLE,
+  DEFAULT_SCHEDULER_ROLE,
+} from "./_defaults.js";
 
 import { attachScheduler } from "./pipe-schedule.js";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
-  const { name, region, handler, path, zip_dir, profile, pipe_role } = config.deployment;
+  const { name, region, handler, path, zip_dir, profile, pipe_role } =
+    config.deployment;
   const { start, end, rate, scheduler_role } = config.schedule;
 
-  const credentials = await get_aws_credentials(profile)
+  const credentials = await get_aws_credentials(profile);
 
   let file = path;
   if (!path || path.length === 0) {
@@ -96,7 +103,7 @@ const main = async ([], opts: Options) => {
 
   let lambdaDir: string;
 
-  if (extname(file) !== '.zip') {
+  if (extname(file) !== ".zip") {
     let outputFile;
 
     try {
@@ -134,9 +141,12 @@ const main = async ([], opts: Options) => {
 
       zippables.forEach((path) => {
         if (is_dir(path)) {
-          archive.directory(path, path, { date: new Date('2000-01-01Z') });
+          archive.directory(path, path, { date: new Date("2000-01-01Z") });
         } else {
-          archive.file(path, { name: basename(path), date: new Date('2000-01-01Z') });
+          archive.file(path, {
+            name: basename(path),
+            date: new Date("2000-01-01Z"),
+          });
         }
         info(`Added ${path}`);
       });
@@ -152,10 +162,18 @@ const main = async ([], opts: Options) => {
     console.log(`Skipping zip step for provided file at ${file}`);
   }
 
-  const lambdaClient = new LambdaClient({ region: region ?? DEFAULT_REGION, credentials });
-  const roleClient = new IAMClient({ region: region ?? DEFAULT_REGION, credentials });
+  const lambdaClient = new LambdaClient({
+    region: region ?? DEFAULT_REGION,
+    credentials,
+  });
+  const roleClient = new IAMClient({
+    region: region ?? DEFAULT_REGION,
+    credentials,
+  });
 
-  async function waitUntilUpdated<T>(lambdaClientCommand: () => Promise<T>): Promise<T> {
+  async function waitUntilUpdated<T>(
+    lambdaClientCommand: () => Promise<T>,
+  ): Promise<T> {
     const res = await lambdaClientCommand();
 
     await waitUntilFunctionUpdatedV2(
@@ -164,7 +182,9 @@ const main = async ([], opts: Options) => {
     ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
       switch (e.state) {
         case "TIMEOUT":
-          fatal_error("Function update to AWS Lambda timed out, please try again.");
+          fatal_error(
+            "Function update to AWS Lambda timed out, please try again.",
+          );
         case "FAILURE":
           fatal_error("Function failed to update to AWS Lambda.");
       }
@@ -175,7 +195,7 @@ const main = async ([], opts: Options) => {
 
   const command = new GetFunctionCommand({ FunctionName: name });
   const readHashCommand = new GetFunctionConfigurationCommand({
-    FunctionName: name
+    FunctionName: name,
   });
 
   const exists = await lambdaClient.send(command).then(
@@ -190,7 +210,11 @@ const main = async ([], opts: Options) => {
 
   let arn: string | undefined;
   try {
-    const pipeRole = await get_aws_role(roleClient, pipe_role, DEFAULT_PIPE_ROLE)
+    const pipeRole = await get_aws_role(
+      roleClient,
+      pipe_role,
+      DEFAULT_PIPE_ROLE,
+    );
     const code = readFileSync(lambdaDir!);
 
     if (exists) {
@@ -203,18 +227,22 @@ const main = async ([], opts: Options) => {
         ZipFile: code,
       };
 
-      const hash = createHash('sha256').update(code).digest('base64')
-      const remoteHash = await lambdaClient.send(readHashCommand).then(({ CodeSha256 }) => CodeSha256)
+      const hash = createHash("sha256").update(code).digest("base64");
+      const remoteHash = await lambdaClient
+        .send(readHashCommand)
+        .then(({ CodeSha256 }) => CodeSha256);
 
       if (hash !== remoteHash) {
         const updateCode = new UpdateFunctionCodeCommand(params);
         const res = await waitUntilUpdated(() => lambdaClient.send(updateCode));
         success(`Function updated successfully: ${res.FunctionName}`);
       } else {
-        console.log(`No detected code changes for function ${name}. Skipping code update step.`)
+        console.log(
+          `No detected code changes for function ${name}. Skipping code update step.`,
+        );
       }
 
-      console.log(`Updating configs for AWS Lambda ${name}`)
+      console.log(`Updating configs for AWS Lambda ${name}`);
 
       const configs = {
         FunctionName: name,
@@ -225,9 +253,9 @@ const main = async ([], opts: Options) => {
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
       const res = await waitUntilUpdated(() => lambdaClient.send(updateConfig));
-      arn = res?.FunctionArn
+      arn = res?.FunctionArn;
 
-      success(`Configuration updated successfully: ${res.FunctionName}`)
+      success(`Configuration updated successfully: ${res.FunctionName}`);
     } else {
       console.log(
         `Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`,
@@ -245,7 +273,7 @@ const main = async ([], opts: Options) => {
 
       const command = new CreateFunctionCommand(params);
       const res = await lambdaClient.send(command);
-      arn = res?.FunctionArn
+      arn = res?.FunctionArn;
 
       success(`Function created successfully:", ${res.FunctionName}`);
     }
@@ -255,12 +283,15 @@ const main = async ([], opts: Options) => {
 
   console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
   try {
-    const schedulerRole = await get_aws_role(roleClient, scheduler_role, DEFAULT_SCHEDULER_ROLE);
+    const schedulerRole = await get_aws_role(
+      roleClient,
+      scheduler_role,
+      DEFAULT_SCHEDULER_ROLE,
+    );
     // await attachScheduler({ arn: arn!, role: schedulerRole, region: region ?? DEFAULT_REGION, start, end, rate });
   } catch (error: any) {
     fatal_error(error);
   }
-
 };
 
 const self = fileURLToPath(import.meta.url);
