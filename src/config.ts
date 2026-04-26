@@ -1,4 +1,4 @@
-import type { Config } from "./types.ts";
+import type { Config, SchedulerDate } from "./types.ts";
 /**
  * @param {{
  *  deployment: {
@@ -9,3 +9,6 @@ export function defineConfig(configuration: Config) {
   return configuration;
 }
 
+export function defineSchedulerDate(date: SchedulerDate) {
+  return date;
+}

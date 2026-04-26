@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+
 import { program } from "commander";
 
 import { IAMClient } from "@aws-sdk/client-iam";
@@ -11,37 +12,47 @@ import {
   type UpdateScheduleCommandInput,
 } from "@aws-sdk/client-scheduler";
 import { GetFunctionCommand, LambdaClient } from "@aws-sdk/client-lambda";
+import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
 import {
   fatal_error,
   get_aws_credentials,
   get_aws_role,
   load_config,
+  success,
 } from "./_utils.js";
 import type { Options } from "./types.js";
-import { DEFAULT_REGION, DEFAULT_SCHEDULER_ROLE } from "./_defaults.js";
+import {
+  DEFAULT_REGION,
+  DEFAULT_TIMEZONE,
+  DEFAULT_SCHEDULER_ROLE,
+} from "./_defaults.js";
+import { convertSchedulerDate } from "./_time.js";
 
 type ScheduleCommandInput = CreateScheduleCommandInput &
   UpdateScheduleCommandInput;
 
-export async function attachScheduler({
-  arn,
-  name,
-  role,
-  region,
-  start,
-  end,
-  rate,
-}: {
-  arn: string;
-  name: string;
-  role: string;
-  region: string;
-  start: Date;
-  end: Date;
-  rate: string;
-}) {
-  const schedulerClient = new SchedulerClient({ region });
+export async function attachScheduler(
+  {
+    arn,
+    name,
+    role,
+    region,
+    start,
+    end,
+    rate,
+  }: {
+    arn: string;
+    name: string;
+    role: string;
+    region: string;
+    start: Date;
+    end: Date;
+    rate: string;
+  },
+  credentials: AwsCredentialIdentityProvider,
+) {
+  const schedulerClient = new SchedulerClient({ region, credentials });
   const schedulerName = `${name}-${region}-schedule`;
 
   const exists = await schedulerClient
@@ -49,7 +60,7 @@ export async function attachScheduler({
     .then(
       () => true,
       (error) => {
-        if (error.name === "ScheduleNotFoundException") {
+        if (error.name === "ResourceNotFoundException") {
           return false;
         }
         fatal_error(error);
@@ -84,16 +95,22 @@ export async function attachScheduler({
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
-  const { name, region, profile } = config.deployment;
-  const { start, end, rate, scheduler_role } = config.schedule;
+  const { name, region = DEFAULT_REGION, profile } = config.deployment;
+  const {
+    start,
+    end,
+    rate,
+    scheduler_role,
+    timezone = DEFAULT_TIMEZONE,
+  } = config.schedule;
 
   const credentials = await get_aws_credentials(profile);
   const lambdaClient = new LambdaClient({
-    region: region ?? DEFAULT_REGION,
+    region: region,
     credentials,
   });
   const roleClient = new IAMClient({
-    region: region ?? DEFAULT_REGION,
+    region: region,
     credentials,
   });
 
@@ -112,20 +129,32 @@ const main = async ([], opts: Options) => {
     },
   );
 
-  const schedulerRole = await get_aws_role(
-    roleClient,
-    scheduler_role,
-    DEFAULT_SCHEDULER_ROLE,
-  );
-  await attachScheduler({
-    arn: arn!,
-    name,
-    role: schedulerRole,
-    region: region ?? DEFAULT_REGION,
-    start,
-    end,
-    rate,
-  });
+  console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
+  try {
+    const schedulerRole = await get_aws_role(
+      roleClient,
+      scheduler_role,
+      DEFAULT_SCHEDULER_ROLE,
+    );
+    const res = await attachScheduler(
+      {
+        arn: arn!,
+        name,
+        role: schedulerRole,
+        region: region,
+        start: convertSchedulerDate(start, timezone),
+        end: convertSchedulerDate(end, timezone),
+        rate,
+      },
+      credentials,
+    );
+
+    success(
+      `Successfully attached scheduler ${res?.ScheduleArn} running from ${start} to ${end} at a schedule of ${rate} for ${name}`,
+    );
+  } catch (error: any) {
+    fatal_error(error);
+  }
 };
 
 const self = fileURLToPath(import.meta.url);

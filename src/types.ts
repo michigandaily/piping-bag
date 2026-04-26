@@ -9,10 +9,11 @@ export type Config = {
     pipe_role: string;
   };
   schedule: {
-    start: Date;
-    end: Date;
+    start: SchedulerDate;
+    end: SchedulerDate;
     rate: string;
     scheduler_role: string;
+    timezone: string;
   };
 };
 
@@ -20,4 +21,11 @@ export type Options = {
   config: string;
   zip: boolean;
   yes: boolean;
+};
+
+export type SchedulerDate = {
+  hour: number;
+  day: number;
+  month?: number;
+  year?: number;
 };

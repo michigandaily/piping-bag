@@ -1,4 +1,4 @@
-import { defineConfig } from "piping-bag";
+import { defineConfig, defineSchedulerDate } from "piping-bag";
 
 export default defineConfig({
   deployment: {
@@ -11,10 +11,21 @@ export default defineConfig({
     pipe_role: "pipe-lambda",
   },
   schedule: {
-    start: new Date(),
-    end: new Date(),
+    start: defineSchedulerDate({
+      hour: 9, // 9 AM
+      day: 1, // 1st
+      month: 1, // January
+      year: 2027,
+    }),
+    end: defineSchedulerDate({
+      hour: 21, // 9 PM
+      day: 2, // 2nd
+      month: 1, // January
+      year: 2027,
+    }),
     rate: "rate(5 minutes)",
     // rate: 'cron(0 12 * * ? *)' // you can also use cron expressions
+    timezone: "America/Detroit", // default timezone is America/Detroit if not specified
     scheduler_role: "pipe-eventbridge",
   },
 });

@@ -39,20 +39,34 @@ import {
 import type { Options } from "./types.js";
 import {
   DEFAULT_REGION,
+  DEFAULT_TIMEZONE,
   RUNTIME,
   BUNDLE,
   DEFAULT_PIPE_ROLE,
   DEFAULT_SCHEDULER_ROLE,
 } from "./_defaults.js";
-
+import { convertSchedulerDate } from "./_time.js";
 import { attachScheduler } from "./pipe-schedule.js";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
 
-  const { name, region, handler, path, zip_dir, profile, pipe_role } =
-    config.deployment;
-  const { start, end, rate, scheduler_role } = config.schedule;
+  const {
+    name,
+    region = DEFAULT_REGION,
+    handler,
+    path,
+    zip_dir,
+    profile,
+    pipe_role,
+  } = config.deployment;
+  const {
+    start,
+    end,
+    rate,
+    scheduler_role,
+    timezone = DEFAULT_TIMEZONE,
+  } = config.schedule;
 
   const credentials = await get_aws_credentials(profile);
 
@@ -163,11 +177,11 @@ const main = async ([], opts: Options) => {
   }
 
   const lambdaClient = new LambdaClient({
-    region: region ?? DEFAULT_REGION,
+    region: region,
     credentials,
   });
   const roleClient = new IAMClient({
-    region: region ?? DEFAULT_REGION,
+    region: region,
     credentials,
   });
 
@@ -253,13 +267,11 @@ const main = async ([], opts: Options) => {
 
       const updateConfig = new UpdateFunctionConfigurationCommand(configs);
       const res = await waitUntilUpdated(() => lambdaClient.send(updateConfig));
-      arn = res?.FunctionArn;
+      arn = res.FunctionArn;
 
       success(`Configuration updated successfully: ${res.FunctionName}`);
     } else {
-      console.log(
-        `Deploying AWS Lambda function ${name} at ${region ?? DEFAULT_REGION}`,
-      );
+      console.log(`Deploying AWS Lambda function ${name} at ${region}`);
 
       const params = {
         FunctionName: name,
@@ -273,7 +285,7 @@ const main = async ([], opts: Options) => {
 
       const command = new CreateFunctionCommand(params);
       const res = await lambdaClient.send(command);
-      arn = res?.FunctionArn;
+      arn = res.FunctionArn;
 
       success(`Function created successfully:", ${res.FunctionName}`);
     }
@@ -288,7 +300,22 @@ const main = async ([], opts: Options) => {
       scheduler_role,
       DEFAULT_SCHEDULER_ROLE,
     );
-    // await attachScheduler({ arn: arn!, role: schedulerRole, region: region ?? DEFAULT_REGION, start, end, rate });
+    const res = await attachScheduler(
+      {
+        arn: arn!,
+        name,
+        role: schedulerRole,
+        region: region,
+        start: convertSchedulerDate(start, timezone),
+        end: convertSchedulerDate(end, timezone),
+        rate,
+      },
+      credentials,
+    );
+
+    success(
+      `Successfully attached scheduler ${res?.ScheduleArn} running from ${start} to ${end} at a schedule of ${rate} for ${name}`,
+    );
   } catch (error: any) {
     fatal_error(error);
   }
