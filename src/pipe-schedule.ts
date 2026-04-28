@@ -21,13 +21,13 @@ import {
   load_config,
   success,
 } from "./_utils.js";
-import type { Options } from "./types.js";
 import {
   DEFAULT_REGION,
   DEFAULT_TIMEZONE,
   DEFAULT_SCHEDULER_ROLE,
 } from "./_defaults.js";
 import { convertSchedulerDate } from "./_time.js";
+import type { Options } from "./types.js";
 
 type ScheduleCommandInput = CreateScheduleCommandInput &
   UpdateScheduleCommandInput;
@@ -52,6 +52,7 @@ export async function attachScheduler(
   },
   credentials: AwsCredentialIdentityProvider,
 ) {
+  console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
   const schedulerClient = new SchedulerClient({ region, credentials });
   const schedulerName = `${name}-${region}-schedule`;
 
@@ -85,7 +86,13 @@ export async function attachScheduler(
   } else {
     command = new CreateScheduleCommand(params);
   }
-  return await schedulerClient.send(command);
+
+  const res = await schedulerClient.send(command);
+  success(
+    `Successfully attached scheduler ${res?.ScheduleArn} running from ${start.toString()} to ${end.toString()} at a schedule of ${rate} for ${name}`,
+  );
+
+  return res;
 }
 
 const main = async ([], opts: Options) => {
@@ -125,14 +132,13 @@ const main = async ([], opts: Options) => {
     },
   );
 
-  console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
   try {
     const schedulerRole = await get_aws_role(
       roleClient,
       scheduler_role,
       DEFAULT_SCHEDULER_ROLE,
     );
-    const res = await attachScheduler(
+    await attachScheduler(
       {
         arn: arn!,
         name,
@@ -143,10 +149,6 @@ const main = async ([], opts: Options) => {
         rate,
       },
       credentials,
-    );
-
-    success(
-      `Successfully attached scheduler ${res?.ScheduleArn} running from ${start} to ${end} at a schedule of ${rate} for ${name}`,
     );
   } catch (error: any) {
     fatal_error(error);
