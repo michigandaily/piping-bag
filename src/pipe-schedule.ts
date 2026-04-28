@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-import { program } from "commander";
+import { Argument, program } from "commander";
 
 import { IAMClient } from "@aws-sdk/client-iam";
 import {
@@ -79,17 +79,13 @@ export async function attachScheduler(
     FlexibleTimeWindow: { Mode: "OFF" },
   };
 
-  try {
-    let command;
-    if (exists) {
-      command = new UpdateScheduleCommand(params);
-    } else {
-      command = new CreateScheduleCommand(params);
-    }
-    return await schedulerClient.send(command);
-  } catch (error: any) {
-    fatal_error(error);
+  let command;
+  if (exists) {
+    command = new UpdateScheduleCommand(params);
+  } else {
+    command = new CreateScheduleCommand(params);
   }
+  return await schedulerClient.send(command);
 }
 
 const main = async ([], opts: Options) => {
@@ -161,6 +157,12 @@ const self = fileURLToPath(import.meta.url);
 if (process.argv[1] === self) {
   program
     .version("0.0.1")
+    .addArgument(
+      new Argument(
+        "<liveness>",
+        "activate or deactivate created schedule",
+      ).choices(["enable, disable"]),
+    )
     .option("-c, --config <path>", "path to config file")
     .parse();
 
