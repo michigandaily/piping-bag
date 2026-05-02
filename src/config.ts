@@ -1,4 +1,4 @@
-import type { Config, SchedulerDate } from "./types.ts";
+import type { Config, SchedulerDate } from "./lib/helpers/types.js";
 /**
  * @param {{
  *  deployment: {

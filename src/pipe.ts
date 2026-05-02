@@ -5,7 +5,7 @@ program
   .version("0.0.1")
   .name("pipe")
   .description("Data collection scripts")
-  .command("deploy", "Deploys a custom script to AWS Lambda")
+  .command("deploy", "Deploys and schedules a custom script to AWS Lambda")
   .command("upload", "Uploads a zipped script to AWS Lambda")
   .command(
     "schedule",

@@ -1,6 +1,6 @@
 import { program } from "commander";
 import { fileURLToPath } from "node:url";
-import type { Options } from "./types.js";
+import type { Options } from "./lib/helpers/types.js";
 
 const main = async ([], opts: Options) => {};
 

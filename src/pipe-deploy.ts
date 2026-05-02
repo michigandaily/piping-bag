@@ -10,18 +10,18 @@ import {
   fatal_error,
   get_aws_role,
   get_aws_credentials,
-} from "./_utils.js";
-import type { Options } from "./types.js";
+} from "./lib/helpers/_utils.js";
+import type { Options } from "./lib/helpers/types.js";
 import {
   DEFAULT_REGION,
   DEFAULT_TIMEZONE,
   DEFAULT_PIPE_ROLE,
   DEFAULT_SCHEDULER_ROLE,
-} from "./_defaults.js";
-import { convertSchedulerDate } from "./_time.js";
+} from "./lib/helpers/_defaults.js";
+import { convertSchedulerDate } from "./lib/helpers/_time.js";
 
-import { attachScheduler } from "./pipe-schedule.js";
-import { bundleHandlers, uploadFunction } from "./pipe-upload.js";
+import { bundleHandlers, uploadFunction } from "./lib/cli/upload.js";
+import { attachScheduler } from "./lib/cli/schedule.js";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
@@ -86,6 +86,7 @@ const main = async ([], opts: Options) => {
         start: convertSchedulerDate(start, timezone),
         end: convertSchedulerDate(end, timezone),
         rate,
+        enable: true,
       },
       credentials,
     );
