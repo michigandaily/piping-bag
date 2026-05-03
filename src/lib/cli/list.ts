@@ -1,8 +1,4 @@
-import {
-  GetFunctionCommand,
-  GetFunctionConfigurationCommand,
-  LambdaClient,
-} from "@aws-sdk/client-lambda";
+import { GetFunctionCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { GetScheduleCommand, SchedulerClient } from "@aws-sdk/client-scheduler";
 import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
@@ -17,21 +13,8 @@ export async function listResources(
     credentials,
   });
   const command = new GetFunctionCommand({ FunctionName: name });
-  const configCommand = new GetFunctionConfigurationCommand({
-    FunctionName: name,
-  });
 
   const lambdaDetails = await lambdaClient.send(command).then(
-    (res) => res,
-    (error) => {
-      if (error.name === "ResourceNotFoundException") {
-        return undefined;
-      }
-      throw Error(error);
-    },
-  );
-
-  const lambdaConfigDetails = await lambdaClient.send(configCommand).then(
     (res) => res,
     (error) => {
       if (error.name === "ResourceNotFoundException") {
@@ -56,12 +39,33 @@ export async function listResources(
       },
     );
 
-  info(
-    "Expecting an output printing out all existing remote resources deployed on AWS :)",
-  );
+  if (lambdaDetails) {
+    info("Found remote lambda uploaded:");
+    console.table(lambdaDetails, [
+      "FunctionName",
+      "Handler",
+      "Runtime",
+      "Timeout",
+      "MemorySize",
+      "EphemeralStorage",
+      "LastModified",
+    ]);
+  }
 
-  info(JSON.stringify(lambdaDetails))
-  info(JSON.stringify(lambdaConfigDetails))
-  info(JSON.stringify(scheduleDetails))
+  if (scheduleDetails) {
+    info("Found remote schedule uploaded:");
+    console.table({ details: scheduleDetails }, [
+      "Name",
+      "ScheduleExpression",
+      "StartDate",
+      "EndDate",
+      "State",
+      "FlexibleTimeWindow",
+      "LastModificationDate",
+    ]);
+  }
 
+  if (!lambdaDetails && !scheduleDetails) {
+    info("No remote resources found or deployed.");
+  }
 }
