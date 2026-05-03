@@ -59,4 +59,9 @@ export async function listResources(
   info(
     "Expecting an output printing out all existing remote resources deployed on AWS :)",
   );
+
+  info(JSON.stringify(lambdaDetails))
+  info(JSON.stringify(lambdaConfigDetails))
+  info(JSON.stringify(scheduleDetails))
+
 }
