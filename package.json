@@ -15,6 +15,9 @@
     "build": "tsup",
     "prepare": "pnpm run build"
   },
+  "files": [
+    "dist/"
+  ],
   "exports": {
     ".": "./dist/config.js",
     "./lib/schema": "./dist/lib/schema.js",
