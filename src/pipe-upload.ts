@@ -11,7 +11,12 @@ import {
   get_aws_credentials,
 } from "./lib/helpers/_utils.js";
 import type { Options } from "./lib/helpers/types.js";
-import { DEFAULT_REGION, DEFAULT_PIPE_ROLE } from "./lib/helpers/_defaults.js";
+import {
+  DEFAULT_REGION,
+  DEFAULT_PIPE_ROLE,
+  MEMSIZE,
+  TIMEOUT,
+} from "./lib/helpers/_defaults.js";
 
 import { bundleHandlers, uploadFunction } from "./lib/cli/upload.js";
 
@@ -24,6 +29,8 @@ const main = async ([], opts: Options) => {
     handler,
     path,
     zip_dir,
+    mem_size = MEMSIZE.DEFAULT,
+    timeout = TIMEOUT.DEFAULT,
     profile,
     pipe_role,
   } = config.deployment;
@@ -46,7 +53,7 @@ const main = async ([], opts: Options) => {
     );
 
     await uploadFunction(
-      { name, role: pipeRole, region, handler, code },
+      { name, role: pipeRole, region, handler, mem_size, timeout, code },
       credentials,
     );
   } catch (error: any) {

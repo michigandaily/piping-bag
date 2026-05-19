@@ -5,6 +5,8 @@ export type Config = {
     handler: string;
     path: string;
     zip_dir: string;
+    mem_size: number;
+    timeout: number;
     profile: string;
     pipe_role: string;
   };

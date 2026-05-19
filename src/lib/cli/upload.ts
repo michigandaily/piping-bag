@@ -158,12 +158,16 @@ export async function uploadFunction(
     role,
     region,
     handler,
+    mem_size,
+    timeout,
     code,
   }: {
     name: string;
     role: string;
     region: string;
     handler: string;
+    mem_size: number;
+    timeout: number;
     code: Buffer;
   },
   credentials: AwsCredentialIdentityProvider,
@@ -242,6 +246,8 @@ export async function uploadFunction(
       Runtime: RUNTIME.DEFAULT_NODEJS,
       Handler: handler,
       Role: role,
+      MemorySize: mem_size,
+      Timeout: timeout,
     };
 
     const updateConfig = new UpdateFunctionConfigurationCommand(configs);
@@ -257,6 +263,8 @@ export async function uploadFunction(
       Runtime: RUNTIME.DEFAULT_NODEJS,
       Handler: handler,
       Role: role,
+      MemorySize: mem_size,
+      Timeout: timeout,
       Code: {
         ZipFile: code,
       },

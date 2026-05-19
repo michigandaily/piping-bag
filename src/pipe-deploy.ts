@@ -17,6 +17,8 @@ import {
   DEFAULT_TIMEZONE,
   DEFAULT_PIPE_ROLE,
   DEFAULT_SCHEDULER_ROLE,
+  MEMSIZE,
+  TIMEOUT,
 } from "./lib/helpers/_defaults.js";
 import { convertSchedulerDate } from "./lib/helpers/_time.js";
 
@@ -32,6 +34,8 @@ const main = async ([], opts: Options) => {
     handler,
     path,
     zip_dir,
+    mem_size = MEMSIZE.DEFAULT,
+    timeout = TIMEOUT.DEFAULT,
     profile,
     pipe_role,
   } = config.deployment;
@@ -62,7 +66,7 @@ const main = async ([], opts: Options) => {
     );
 
     const res = await uploadFunction(
-      { name, role: pipeRole, region, handler, code },
+      { name, role: pipeRole, region, handler, mem_size, timeout, code },
       credentials,
     );
 
