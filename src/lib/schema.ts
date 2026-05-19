@@ -1,9 +1,4 @@
-/**
- * @param {{
- *  deployment: {
- *  }
- * }} configuration
- */
 export function pipe() {
-    console.log("I'm a pipe")
+  console.log("I'm a pipe");
 }
+

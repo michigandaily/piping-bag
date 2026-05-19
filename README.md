@@ -26,12 +26,38 @@ export default defineConfig({
     region: "us-east-2",
     path: "./src/scraper.js",
     zip_dir: "./tmp",
+    mem_size: 512, // 512 GB, optional parameter
+    timeout: 10, // 10 seconds, optional parameter
     profile: "pipe",
-  }
+    pipe_role: "pipe-lambda",
+  },
+  schedule: {
+    start: defineSchedulerDate({
+      hour: 9, // 9 AM
+      day: 1, // 1st
+      month: 1, // January
+      year: 2027,
+    }),
+    end: defineSchedulerDate({
+      hour: 21, // 9 PM
+      day: 2, // 2nd
+      month: 1, // January
+      year: 2027,
+    }),
+    rate: "rate(5 minutes)",
+    // rate: 'cron(0 12 * * ? *)' // you can also use cron expressions
+    timezone: "America/Detroit", // default timezone is America/Detroit if not specified
+    scheduler_role: "pipe-eventbridge",
+  },
+  schema: {
+    bucket: "stash.michigandaily.com",
+  },
 });
 ```
 
-The `profile` property defines the name of the AWS credentials profile that you will have to populate in `~/.aws/credentials`[^note]. For daily staffers, the `profile` is `pipe` by default. Make sure to use a file with all the proper AWS Lambda and S3 permissions.
+## IAM Setup
+
+The `profile` property defines the name of the AWS credentials profile that you will have to populate in `~/.aws/credentials`[^note]. For daily staffers, the `profile` is `pipe` by default. Make sure to use a file with all the proper AWS Lambda and S3 permissions. See `example.pipe-profile.json` for all required permissions.
 
 ```sh
 # ~/.aws/credentials
@@ -39,6 +65,8 @@ The `profile` property defines the name of the AWS credentials profile that you 
 aws_access_key_id=<SECRET_KEY>
 aws_secret_access_key=<SECRET_KEY>
 ```
+
+The `pipe_role` and `scheduler_role` properties define the name of the AWS role names that you will have to define within your AWS IAM dashboard. See `example.pipe_role.json` and `example.scheduler_role.json` to see default permissions you can use to easily configure your IAM roles.
 
 ## Development
 
@@ -48,16 +76,19 @@ For local development, you can symlink to your local version of `pipng-bag` with
 
 [^note]: For now, ask @yum25 for the pipe credentials. It should be added to 1password later.
 
-## Milestones:
+## Milestones
 
-- M1 - Naive upload script (.zip) to AWS Lambda and AWS EventBridge
+- M1 - Naive upload script (.zip) to AWS Lambda and AWS EventBridge ✅️
 - M2 - Naive helper function to pipe scraper data into an AWS S3 bucket
-- M3 - Configurable upload script using config file
-  - Should allow configurable lambda start time and end time
+- M3 - Configurable upload script using config file ✅️
+  - Should allow configurable lambda start time and end time ✅️
   - At this point, is already usable/useful for basic elections scraping
+  - Consider adding support for uploading docker images 🟠
 - M4 - Configurable helper function to pipe scraper data into specific AWS S3 bucket
-  - The data configuration/schema for AWS S3 should be set at this point
+  - The data configuration/schema for AWS S3 should be set at this point 🟠
   - While developed separately, its best if config for helper and upload script are the same
+  - consider adding support for uploading custom layers provided by pipe - multilanguage solution
+    for AWS S3 upload helper functions
 - M5 - Helper function to collect all existing data from one scraper into a JSON response (Similar to an API service)
 - M6 - Developer testing and verification
   - Important to assess any footguns, embed preventative measures in the code to prevent developers from overwriting important S3 buckets or lambdas
@@ -68,5 +99,6 @@ For local development, you can symlink to your local version of `pipng-bag` with
   - Lambda code failures
 - M8 - Assess future improvements
   - Unit + integration testing?
+    - Consider using local docker image for testing as well
   - Fetch/ingestion scripts to pull data from a variety of sources (google docs, sheets, pdfs, etc)?
   - Formalized API for pulling elections data (data in a standardized, schema format)?

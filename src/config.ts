@@ -1,10 +1,5 @@
 import type { Config, SchedulerDate } from "./lib/helpers/types.js";
-/**
- * @param {{
- *  deployment: {
- *  }
- * }} configuration
- */
+
 export function defineConfig(configuration: Config) {
   return configuration;
 }

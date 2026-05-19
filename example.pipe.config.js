@@ -4,9 +4,11 @@ export default defineConfig({
   deployment: {
     name: "scraper",
     handler: "scraper.handler",
-    region: "us-east-2",
+    region: "us-east-2", // optional
     path: "./src/scraper.js",
     zip_dir: "./tmp",
+    mem_size: 512, // 512 GB, optional
+    timeout: 10, // 10 seconds, optional
     profile: "pipe",
     pipe_role: "pipe-lambda",
   },
@@ -27,5 +29,8 @@ export default defineConfig({
     // rate: 'cron(0 12 * * ? *)' // you can also use cron expressions
     timezone: "America/Detroit", // default timezone is America/Detroit if not specified
     scheduler_role: "pipe-eventbridge",
+  },
+  schema: {
+    bucket: "stash.michigandaily.com",
   },
 });
