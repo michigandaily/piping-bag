@@ -23,11 +23,11 @@ export default defineConfig({
   deployment: {
     name: "scraper",
     handler: "scraper.handler",
-    region: "us-east-2",
+    region: "us-east-2", // optional
     path: "./src/scraper.js",
     zip_dir: "./tmp",
-    mem_size: 512, // 512 GB, optional parameter
-    timeout: 10, // 10 seconds, optional parameter
+    mem_size: 512, // 512 GB, optional
+    timeout: 10, // 10 seconds, optional
     profile: "pipe",
     pipe_role: "pipe-lambda",
   },
@@ -66,7 +66,7 @@ aws_access_key_id=<SECRET_KEY>
 aws_secret_access_key=<SECRET_KEY>
 ```
 
-The `pipe_role` and `scheduler_role` properties define the name of the AWS role names that you will have to define within your AWS IAM dashboard. See `example.pipe_role.json` and `example.scheduler_role.json` to see default permissions you can use to easily configure your IAM roles.
+The `pipe_role` and `scheduler_role` properties define the name of the AWS role names that you will have to define within your AWS IAM dashboard. Both `pipe_role` and `scheduler_role` require at minimum basic lambda write permissions.
 
 ## Development
 
@@ -86,19 +86,19 @@ For local development, you can symlink to your local version of `pipng-bag` with
   - Consider adding support for uploading docker images 🟠
 - M4 - Configurable helper function to pipe scraper data into specific AWS S3 bucket
   - The data configuration/schema for AWS S3 should be set at this point 🟠
-  - While developed separately, its best if config for helper and upload script are the same
+    - consider JSON validation before deployment
   - consider adding support for uploading custom layers provided by pipe - multilanguage solution
     for AWS S3 upload helper functions
 - M5 - Helper function to collect all existing data from one scraper into a JSON response (Similar to an API service)
 - M6 - Developer testing and verification
   - Important to assess any footguns, embed preventative measures in the code to prevent developers from overwriting important S3 buckets or lambdas
-  - Prevent devs from running lambda indefinitely
+  - Prevent devs from running lambda indefinitely ✅️ (must define end date)
   - Assess S3 storage efficiency
 - M7 - Add (slack?) notification system for failures
   - Lambda running too long, lambda start times/end times
   - Lambda code failures
 - M8 - Assess future improvements
-  - Unit + integration testing?
+  - Unit + integration testing? 🟠
     - Consider using local docker image for testing as well
   - Fetch/ingestion scripts to pull data from a variety of sources (google docs, sheets, pdfs, etc)?
   - Formalized API for pulling elections data (data in a standardized, schema format)?

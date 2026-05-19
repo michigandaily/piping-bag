@@ -1,0 +1,31 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "VisualEditor0",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "iam:GetRole",
+        "scheduler:GetSchedule",
+        "lambda:GetFunction",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:GetFunctionConfiguration",
+        "scheduler:DeleteSchedule",
+        "lambda:UpdateFunctionCode",
+        "lambda:PassCapacityProvider",
+        "iam:PassRole",
+        "scheduler:UpdateSchedule",
+        "scheduler:CreateSchedule",
+        "lambda:DeleteFunction"
+      ],
+      "Resource": [
+        "arn:aws:lambda:*:{Account}:function:*",
+        "arn:aws:lambda:*:{Account}:capacity-provider:*",
+        "arn:aws:iam::{Account}:role/pipe-lambda",
+        "arn:aws:iam::{Account}:role/pipe-eventbridge",
+        "arn:aws:scheduler:*:{Account}:schedule/*/*"
+      ]
+    }
+  ]
+}
