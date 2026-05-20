@@ -57,7 +57,7 @@ export default defineConfig({
 
 ## IAM Setup
 
-The `profile` property defines the name of the AWS credentials profile that you will have to populate in `~/.aws/credentials`[^note]. For daily staffers, the `profile` is `pipe` by default. Make sure to use a file with all the proper AWS Lambda and S3 permissions. See `example.pipe-profile.json` for all required permissions.
+The `profile` property defines the name of the AWS credentials profile that you will have to populate in `~/.aws/credentials`[^note]. For daily staffers, the `profile` is `pipe` by default. Make sure to use a file with all the proper AWS Lambda and S3 permissions. See `example.aws-iam-policy.json` for all required permissions.
 
 ```sh
 # ~/.aws/credentials
