@@ -25,7 +25,7 @@ export async function listResources(
   );
 
   const schedulerClient = new SchedulerClient({ region, credentials });
-  const schedulerName = `${name}-${region}-schedule`;
+  const schedulerName = `${name}-schedule`;
 
   const scheduleDetails = await schedulerClient
     .send(new GetScheduleCommand({ Name: schedulerName }))
