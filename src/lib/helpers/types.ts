@@ -17,6 +17,9 @@ export type Config = {
     scheduler_role: string;
     timezone: string;
   };
+  schema: {
+    bucket: string;
+  };
 };
 
 export type Options = {
