@@ -103,6 +103,7 @@ export async function bundleHandlers({
         platform: "node",
         target: BUNDLE.DEFAULT_NODE_TARGET,
         outfile: bundleFile,
+        external: ["@aws-sdk/*"],
       });
 
       zippables.push(bundleFile);
