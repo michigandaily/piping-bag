@@ -43,7 +43,7 @@ const main = async ([], opts: Options) => {
   });
 
   try {
-    const lambdaDir = await bundleHandlers({ path, handler, zip_dir });
+    const lambdaDir = await bundleHandlers({ path, handler, zip_dir }, config);
     const code = readFileSync(lambdaDir);
 
     const pipeRole = await get_aws_role(

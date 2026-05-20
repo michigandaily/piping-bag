@@ -1,19 +1,17 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Temporal } from "@js-temporal/polyfill";
 
+import { load_config } from "./helpers/_utils.js";
 import { DEFAULT_REGION } from "./helpers/_defaults.js";
-import type { Config } from "./helpers/types.js";
 
-export async function pipe(
-  payload: string,
-  format: string = ".json",
-  config: Config,
-) {
+export async function pipe(payload: string, format: string = ".json") {
   // NoOp and log on dev environments
   if (process.env.STAGE !== "production") {
     console.log(payload);
     return;
   }
+
+  const { config } = (await load_config())!;
 
   const { name, region = DEFAULT_REGION } = config.deployment;
   const { bucket } = config.schema;
@@ -58,4 +56,7 @@ export async function pipe(
   }
 }
 
-export async function pipeFetch(name: string, region: string) {}
+export async function pipeFetch() {
+  const { config } = (await load_config())!;
+  const { name, region } = config.deployment;
+}

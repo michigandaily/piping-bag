@@ -23,19 +23,24 @@ import {
   success,
   info,
   fatal_error,
+  load_config,
 } from "../helpers/_utils.js";
 import { RUNTIME, BUNDLE } from "../helpers/_defaults.js";
+import type { Config } from "../helpers/types.js";
 import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
-export async function bundleHandlers({
-  path,
-  handler,
-  zip_dir,
-}: {
-  path: string;
-  handler: string;
-  zip_dir: string;
-}) {
+export async function bundleHandlers(
+  {
+    path,
+    handler,
+    zip_dir,
+  }: {
+    path: string;
+    handler: string;
+    zip_dir: string;
+  },
+  config: Config,
+) {
   let file = path;
   if (!path || path.length === 0) {
     const files = await Array.fromAsync(
@@ -113,6 +118,7 @@ export async function bundleHandlers({
 
     async function zipFiles(
       files: string[],
+      buffers: { name: string; body: string }[],
       outputFile: string,
     ): Promise<string> {
       return new Promise((resolve, reject) => {
@@ -139,11 +145,19 @@ export async function bundleHandlers({
           info(`Added ${path}`);
         });
 
+        buffers.forEach(({ name, body }: { name: string; body: string }) => {
+          archive.append(body, { name });
+        });
+
         archive.finalize();
       });
     }
 
-    lambdaDir = await zipFiles(zippables, outputFile);
+    lambdaDir = await zipFiles(
+      zippables,
+      [{ name: "pipe.config.json", body: JSON.stringify(config) }],
+      outputFile,
+    );
     success(`Created ${outputFile} successfully at ${lambdaDir!}`);
   } else {
     lambdaDir = file;
@@ -249,6 +263,11 @@ export async function uploadFunction(
       Role: role,
       MemorySize: mem_size,
       Timeout: timeout,
+      Environment: {
+        Variables: {
+          STAGE: "production",
+        },
+      },
     };
 
     const updateConfig = new UpdateFunctionConfigurationCommand(configs);
@@ -268,6 +287,11 @@ export async function uploadFunction(
       Timeout: timeout,
       Code: {
         ZipFile: code,
+      },
+      Environment: {
+        Variables: {
+          STAGE: "production",
+        },
       },
     };
 
