@@ -36,7 +36,7 @@ export async function attachScheduler(
 ) {
   console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
   const schedulerClient = new SchedulerClient({ region, credentials });
-  const schedulerName = `${name}-${region}-schedule`;
+  const schedulerName = `${name}-schedule`;
 
   const exists = await schedulerClient
     .send(new GetScheduleCommand({ Name: schedulerName }))
