@@ -11,6 +11,7 @@ export async function pipe(payload: string, format: string = ".json") {
     return;
   }
 
+  // Production S3 Upload
   const { config } = (await load_config())!;
 
   const { name, region = DEFAULT_REGION } = config.deployment;
@@ -54,9 +55,4 @@ export async function pipe(payload: string, format: string = ".json") {
                     \t${err}`,
     );
   }
-}
-
-export async function pipeFetch() {
-  const { config } = (await load_config())!;
-  const { name, region } = config.deployment;
 }
