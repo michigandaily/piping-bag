@@ -4,10 +4,10 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
-import { load_config } from "../helpers/_utils.js";
-import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "../helpers/_defaults.js";
-import type { SchedulerDate } from "../helpers/types.js";
-import { toUnix } from "../helpers/_time.js";
+import { load_config } from "./helpers/_utils.js";
+import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "./helpers/_defaults.js";
+import type { SchedulerDate } from "./helpers/types.js";
+import { toUnix } from "./helpers/_time.js";
 
 async function pipeFetch(client: S3Client, bucket: string, key: string) {
   const latest = await client.send(
@@ -35,7 +35,11 @@ export async function pipeFetchRange(
   const start = toUnix(range[0], timezone);
   const end = toUnix(range[1], timezone);
 
-  const client = new S3Client({ region });
+  const client = new S3Client({
+    region,
+    signer: { sign: async (request) => request },
+  });
+
   try {
     const res = await client.send(
       new ListObjectsV2Command({
@@ -64,7 +68,12 @@ export async function pipeFetchLatest() {
   const { bucket } = config.schema;
   const metadataKey = `pipe/${name}/metadata.json`;
 
-  const client = new S3Client({ region });
+  const client = new S3Client({
+    region,
+    signer: { sign: async (request) => request },
+  });
+
+  // TODO: add client/browser side caching for long-lived timestamp keys
   try {
     const metadata = await pipeFetch(client, bucket, metadataKey);
     const payload = await pipeFetch(client, bucket, metadata.latest);
