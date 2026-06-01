@@ -23,7 +23,6 @@ import {
   success,
   info,
   fatal_error,
-  load_config,
 } from "../helpers/_utils.js";
 import { RUNTIME, BUNDLE } from "../helpers/_defaults.js";
 import type { Config } from "../helpers/types.js";
