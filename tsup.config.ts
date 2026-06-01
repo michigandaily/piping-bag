@@ -10,6 +10,7 @@ export default defineConfig({
     "src/pipe-list.ts",
     "src/pipe-destroy.ts",
     "src/lib/schema.ts",
+    "src/lib/api.ts",
     "src/helpers/types.ts",
   ],
   format: ["esm"],

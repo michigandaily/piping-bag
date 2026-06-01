@@ -21,6 +21,7 @@
   "exports": {
     ".": "./dist/config.js",
     "./lib/schema": "./dist/lib/schema.js",
+    "./lib/api": "./dist/lib/api.js",
     "./types": "./dist/types.js"
   },
   "license": "MIT",
