@@ -58,6 +58,7 @@ export async function bundleHandlers(
           message:
             "Multiple files found for provided handler, please select the file you want to deploy:",
           choices: files,
+          theme: { keybindings: ["vim"] },
         });
       } catch (error: any) {
         if (error instanceof Error && error.name === "ExitPromptError") {
@@ -297,7 +298,7 @@ export async function uploadFunction(
     const command = new CreateFunctionCommand(params);
     const res = await lambdaClient.send(command);
 
-    success(`Function created successfully:", ${res.FunctionName}`);
+    success(`Function created successfully: ${res.FunctionName}`);
     return res;
   }
 }
