@@ -17,7 +17,7 @@ program
   )
   .command(
     "destroy",
-    "Destroys all global AWS resources related to the piping-bag configuration",
+    "Destroys all remote AWS resources related to the piping-bag configuration",
   );
 
 program.parse(process.argv);
