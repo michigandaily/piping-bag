@@ -13,7 +13,9 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepare": "pnpm run build && pnpm pack"
+    "prepare": "pnpm run build && pnpm pack",
+    "test": "node --import tsx --test src/tests/**/*-test.ts",
+    "test:file": "node --import tsx --test"
   },
   "files": [
     "dist/"
@@ -47,6 +49,7 @@
     "@types/node": "^25.9.0",
     "eslint": "^10.0.2",
     "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }
 }

@@ -13,3 +13,7 @@ yarn-error.log
 dist
 dist/*
 .env
+
+# tests
+fixtures/tmp
+fixtures/tmp/*
