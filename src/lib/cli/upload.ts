@@ -28,6 +28,45 @@ import { RUNTIME, BUNDLE } from "../helpers/_defaults.js";
 import type { Config } from "../helpers/types.js";
 import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
+export async function zipFiles({
+  files,
+  buffers,
+  outputDir,
+}: {
+  files: string[];
+  buffers: { name: string; body: string }[];
+  outputDir: string;
+}): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    const wStream = createWriteStream(outputDir);
+
+    wStream.on("close", () => resolve(outputDir));
+    wStream.on("error", reject);
+
+    archive.on("error", reject);
+    archive.pipe(wStream);
+
+    files.forEach((path) => {
+      if (is_dir(path)) {
+        archive.directory(path, path, { date: new Date("2000-01-01Z") });
+      } else {
+        archive.file(path, {
+          name: basename(path),
+          date: new Date("2000-01-01Z"),
+        });
+      }
+      info(`Added ${path}`);
+    });
+
+    buffers.forEach(({ name, body }: { name: string; body: string }) => {
+      archive.append(body, { name });
+    });
+
+    archive.finalize();
+  });
+}
+
 export async function bundleHandlers(
   {
     path,
@@ -116,48 +155,11 @@ export async function bundleHandlers(
       zippables.push(file);
     }
 
-    async function zipFiles(
-      files: string[],
-      buffers: { name: string; body: string }[],
-      outputFile: string,
-    ): Promise<string> {
-      return new Promise((resolve, reject) => {
-        const outputDir = `${zip_dir}/${outputFile}`;
-
-        const archive = archiver("zip", { zlib: { level: 9 } });
-        const wStream = createWriteStream(outputDir);
-
-        wStream.on("close", () => resolve(outputDir));
-        wStream.on("error", reject);
-
-        archive.on("error", reject);
-        archive.pipe(wStream);
-
-        files.forEach((path) => {
-          if (is_dir(path)) {
-            archive.directory(path, path, { date: new Date("2000-01-01Z") });
-          } else {
-            archive.file(path, {
-              name: basename(path),
-              date: new Date("2000-01-01Z"),
-            });
-          }
-          info(`Added ${path}`);
-        });
-
-        buffers.forEach(({ name, body }: { name: string; body: string }) => {
-          archive.append(body, { name });
-        });
-
-        archive.finalize();
-      });
-    }
-
-    lambdaDir = await zipFiles(
-      zippables,
-      [{ name: "pipe.config.json", body: JSON.stringify(config) }],
-      outputFile,
-    );
+    lambdaDir = await zipFiles({
+      files: zippables,
+      buffers: [{ name: "pipe.config.json", body: JSON.stringify(config) }],
+      outputDir: `${zip_dir}/${outputFile}`,
+    });
     success(`Created ${outputFile} successfully at ${lambdaDir!}`);
   } else {
     lambdaDir = file;
