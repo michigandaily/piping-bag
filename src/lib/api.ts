@@ -4,10 +4,11 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
-import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "./helpers/_defaults.js";
-import type { SchedulerDate } from "./helpers/types.js";
-import { currentUnix, toUnix } from "./helpers/_time.js";
 import EventEmitter from "node:events";
+
+import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "./helpers/_defaults.js";
+import { type SchedulerDate, PollingType } from "./helpers/types.js";
+import { currentUnix, toUnix } from "./helpers/_time.js";
 
 export class PipeClient {
   client: S3Client;
@@ -51,35 +52,48 @@ export class PipeClient {
   }
 
   clearData() {
+    // TODO: clear browser/clientside cache
     this.data = {};
   }
 
-  startPoll(interval: number = 50000) {
+  startPoll(type: PollingType = PollingType.Latest, interval: number = 50000) {
     this.emitter = new EventEmitter();
 
     // TODO: set data in browser/clientside cache and pull
     // from there if it exists and useCache is true
     this.poller = setInterval(async () => {
-      const entries = await PipeClient.fetchRange(
-        this.client,
-        this.name,
-        this.bucket,
-        [currentUnix() - interval, currentUnix()],
-      );
+      switch (type) {
+        case PollingType.Latest:
+          const entry = await PipeClient.fetchLatest(
+            this.client,
+            this.name,
+            this.bucket,
+          );
 
-      this.data = {
-        ...this.data,
-        ...entries,
-      };
+          this.data = Object.assign(this.data, entry);
+          this.emitter.emit(type, entry);
+        case PollingType.Timeline:
+          // FIXME: instead of current - interval, find the most recent timestamp
+          // within the existing data. In timeline cases, we want all data collected.
+          // The current implementation only fetches data within the polling period.
+          const entries = await PipeClient.fetchRange(
+            this.client,
+            this.name,
+            this.bucket,
+            [currentUnix() - interval, currentUnix()],
+          );
 
-      this.emitter.emit("update", this.getData());
+          this.data = Object.assign(this.data, ...entries);
+          this.emitter.emit(type, this.getData());
+      }
     }, interval);
 
     return this.emitter;
   }
 
   endPoll() {
-    // TODO: clear browser/clientside cache
+    // TODO: if possible and idiomatic, clean up event emitter
+    // as well.
     clearInterval(this.poller);
   }
 
@@ -98,12 +112,9 @@ export class PipeClient {
       .Body!.transformToString()
       .then((data) => JSON.parse(data));
 
-    return payload;
+    return { timestamp: +key, data: payload };
   }
 
-  // FIXME: return the relevant timestamp in addition to the
-  // data instead of a naive unordered array. This could be
-  // potentially implemented in the schema itself.
   static async fetchRange(
     client: S3Client,
     name: string,
@@ -141,8 +152,8 @@ export class PipeClient {
   static async fetchLatest(client: S3Client, name: string, bucket: string) {
     const metadataKey = `pipe/${name}/metadata.json`;
     try {
-      const metadata = await PipeClient.fetch(client, bucket, metadataKey);
-      const payload = await PipeClient.fetch(client, bucket, metadata.latest);
+      const { data } = await PipeClient.fetch(client, bucket, metadataKey);
+      const payload = await PipeClient.fetch(client, bucket, data.latest);
 
       return payload;
     } catch (err: any) {
