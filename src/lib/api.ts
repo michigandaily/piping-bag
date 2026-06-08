@@ -95,6 +95,7 @@ export class PipeClient {
     // TODO: if possible and idiomatic, clean up event emitter
     // as well.
     clearInterval(this.poller);
+    this.emitter.removeAllListeners();
   }
 
   listen(id: string, callback: (event: any[]) => {}) {
