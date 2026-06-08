@@ -18,6 +18,7 @@ export async function pipe(payload: string, format: string = ".json") {
   const { bucket } = config.schema;
   const key = `pipe/${name}/${Temporal.Now.instant().epochMilliseconds}${format}`;
 
+  // TODO: support multiple upload formats (JSON, CSV, e.t.c.)
   const client = new S3Client({ region });
   try {
     await client.send(

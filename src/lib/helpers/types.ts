@@ -24,7 +24,6 @@ export type Config = {
 
 export type Options = {
   config: string;
-  zip: boolean;
   yes: boolean;
 };
 
@@ -34,3 +33,8 @@ export type SchedulerDate = {
   month?: number;
   year?: number;
 };
+
+export enum PollingType {
+  Latest = "update",
+  Timeline = "change",
+}

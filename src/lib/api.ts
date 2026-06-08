@@ -4,82 +4,161 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
-import { load_config } from "./helpers/_utils.js";
+import EventEmitter from "node:events";
+
 import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "./helpers/_defaults.js";
-import type { SchedulerDate } from "./helpers/types.js";
-import { toUnix } from "./helpers/_time.js";
+import { type SchedulerDate, PollingType } from "./helpers/types.js";
+import { currentUnix, toUnix } from "./helpers/_time.js";
 
-async function pipeFetch(client: S3Client, bucket: string, key: string) {
-  const latest = await client.send(
-    new GetObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    }),
-  );
+export class PipeClient {
+  client: S3Client;
+  name: string;
+  bucket: string;
+  useCache: boolean;
+  data: Record<number, any>;
 
-  const payload = await latest
-    .Body!.transformToString()
-    .then((data) => JSON.parse(data));
+  poller!: ReturnType<typeof setInterval>;
+  emitter!: EventEmitter;
 
-  return payload;
-}
+  constructor({
+    name,
+    region = DEFAULT_REGION,
+    bucket,
+    useCache = true,
+  }: {
+    name: string;
+    region: string;
+    bucket: string;
+    useCache: boolean;
+  }) {
+    // TODO: prepopulate data with cached browser/clientside data
+    // if useCache is true
+    this.data = {};
+    this.name = name;
+    this.bucket = bucket;
+    this.useCache = useCache;
 
-export async function pipeFetchRange(
-  range: [SchedulerDate, SchedulerDate],
-  timezone: string = DEFAULT_TIMEZONE,
-) {
-  const { config } = (await load_config())!;
-  const { name, region = DEFAULT_REGION } = config.deployment;
-  const { bucket } = config.schema;
+    this.client = new S3Client({
+      region,
+      signer: { sign: async (request) => request },
+    });
+  }
 
-  const start = toUnix(range[0], timezone);
-  const end = toUnix(range[1], timezone);
+  getData(id?: number) {
+    if (id) {
+      return this.data[id];
+    }
+    return this.data;
+  }
 
-  const client = new S3Client({
-    region,
-    signer: { sign: async (request) => request },
-  });
+  clearData() {
+    // TODO: clear browser/clientside cache
+    this.data = {};
+  }
 
-  try {
-    const res = await client.send(
-      new ListObjectsV2Command({
-        Bucket: `bucket/${name}`,
+  startPoll(type: PollingType = PollingType.Latest, interval: number = 50000) {
+    this.emitter = new EventEmitter();
+
+    // TODO: set data in browser/clientside cache and pull
+    // from there if it exists and useCache is true
+    this.poller = setInterval(async () => {
+      switch (type) {
+        case PollingType.Latest:
+          const entry = await PipeClient.fetchLatest(
+            this.client,
+            this.name,
+            this.bucket,
+          );
+
+          this.data = Object.assign(this.data, entry);
+          this.emitter.emit(type, entry);
+        case PollingType.Timeline:
+          // FIXME: instead of current - interval, find the most recent timestamp
+          // within the existing data. In timeline cases, we want all data collected.
+          // The current implementation only fetches data within the polling period.
+          const entries = await PipeClient.fetchRange(
+            this.client,
+            this.name,
+            this.bucket,
+            [currentUnix() - interval, currentUnix()],
+          );
+
+          this.data = Object.assign(this.data, ...entries);
+          this.emitter.emit(type, this.getData());
+      }
+    }, interval);
+
+    return this.emitter;
+  }
+
+  endPoll() {
+    // TODO: if possible and idiomatic, clean up event emitter
+    // as well.
+    clearInterval(this.poller);
+    this.emitter.removeAllListeners();
+  }
+
+  listen(id: string, callback: (event: any[]) => {}) {
+    this.startPoll().on(id, callback);
+  }
+
+  static async fetch(client: S3Client, bucket: string, key: string) {
+    const latest = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
       }),
     );
+    const payload = await latest
+      .Body!.transformToString()
+      .then((data) => JSON.parse(data));
 
-    const entries = res.Contents!.filter((entry) => {
-      const [timestamp] = entry.Key!.split(".");
-      return timestamp && +timestamp >= start && +timestamp <= end;
-    });
-
-    const promises = entries.map((entry) =>
-      pipeFetch(client, bucket, entry.Key!),
-    );
-
-    return Promise.all(promises);
-  } catch (err: any) {
-    throw Error(`pipeFetch Error: ${err}`);
+    return { timestamp: +key, data: payload };
   }
-}
 
-export async function pipeFetchLatest() {
-  const { config } = (await load_config())!;
-  const { name, region = DEFAULT_REGION } = config.deployment;
-  const { bucket } = config.schema;
-  const metadataKey = `pipe/${name}/metadata.json`;
+  static async fetchRange(
+    client: S3Client,
+    name: string,
+    bucket: string,
+    range: [SchedulerDate | number, SchedulerDate | number],
+    timezone: string = DEFAULT_TIMEZONE,
+  ) {
+    const start =
+      typeof range[0] === "number" ? range[0] : toUnix(range[0], timezone);
+    const end =
+      typeof range[1] === "number" ? range[1] : toUnix(range[1], timezone);
 
-  const client = new S3Client({
-    region,
-    signer: { sign: async (request) => request },
-  });
+    try {
+      const res = await client.send(
+        new ListObjectsV2Command({
+          Bucket: `bucket/${name}`,
+        }),
+      );
 
-  // TODO: add client/browser side caching for long-lived timestamp keys
-  try {
-    const metadata = await pipeFetch(client, bucket, metadataKey);
-    const payload = await pipeFetch(client, bucket, metadata.latest);
+      const entries = res.Contents!.filter((entry) => {
+        const [timestamp] = entry.Key!.split(".");
+        return timestamp && +timestamp >= start && +timestamp <= end;
+      });
 
-    return payload;
-  } catch (err: any) {
-    throw Error(`pipeFetchLatest Error: ${err}`);
+      const promises = entries.map((entry) =>
+        PipeClient.fetch(client, bucket, entry.Key!),
+      );
+
+      return Promise.all(promises);
+    } catch (err: any) {
+      throw Error(`pipeFetch Error: ${err}`);
+    }
+  }
+
+  static async fetchLatest(client: S3Client, name: string, bucket: string) {
+    const metadataKey = `pipe/${name}/metadata.json`;
+    try {
+      const { data } = await PipeClient.fetch(client, bucket, metadataKey);
+      const payload = await PipeClient.fetch(client, bucket, data.latest);
+
+      return payload;
+    } catch (err: any) {
+      throw Error(`pipeFetchLatest Error: ${err}`);
+    }
   }
 }
