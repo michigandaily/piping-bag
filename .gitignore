@@ -15,5 +15,8 @@ dist/*
 .env
 
 # tests
-fixtures/tmp
-fixtures/tmp/*
+**/fixtures/tmp
+**/fixtures/tmp/*
+!**/fixtures/**/*.config.json
+!**/fixtures/**/*.config.js
+

@@ -1,0 +1,33 @@
+{
+  "deployment": {
+    "name": "scraper",
+    "handler": "scraper.handler",
+    "region": "us-east-2",
+    "path": "./src/scraper.js",
+    "zip_dir": "./tmp",
+    "mem_size": 512,
+    "timeout": 10,
+    "profile": "pipe",
+    "pipe_role": "pipe-lambda"
+  },
+  "schedule": {
+    "start": {
+      "hour": 9,
+      "day": 1,
+      "month": 1,
+      "year": 2027
+    },
+    "end": {
+      "hour": 21,
+      "day": 2,
+      "month": 1,
+      "year": 2027
+    },
+    "rate": "rate(5 minutes)",
+    "timezone": "America/Detroit",
+    "scheduler_role": "pipe-eventbridge"
+  },
+  "schema": {
+    "bucket": "stash.michigandaily.com"
+  }
+}
