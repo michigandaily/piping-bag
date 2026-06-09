@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { program } from "commander";
 
 import { IAMClient } from "@aws-sdk/client-iam";
+import { LambdaClient } from "@aws-sdk/client-lambda";
 
 import {
   load_config,
@@ -52,9 +53,14 @@ const main = async ([], opts: Options) => {
       DEFAULT_PIPE_ROLE,
     );
 
+    const lambdaClient = new LambdaClient({
+      region: region,
+      credentials,
+    });
+
     await uploadFunction(
       { name, role: pipeRole, region, handler, mem_size, timeout, code },
-      credentials,
+      lambdaClient,
     );
   } catch (error: any) {
     fatal_error(error);

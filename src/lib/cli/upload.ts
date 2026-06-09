@@ -26,7 +26,6 @@ import {
 } from "../helpers/_utils.js";
 import { RUNTIME, BUNDLE } from "../helpers/_defaults.js";
 import type { Config } from "../helpers/types.js";
-import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
 export async function zipFiles({
   files,
@@ -187,13 +186,8 @@ export async function uploadFunction(
     timeout: number;
     code: Buffer;
   },
-  credentials: AwsCredentialIdentityProvider,
+  lambdaClient: LambdaClient,
 ) {
-  const lambdaClient = new LambdaClient({
-    region: region,
-    credentials,
-  });
-
   async function waitUntilUpdated<T>(
     lambdaClientCommand: () => Promise<T>,
   ): Promise<T> {
