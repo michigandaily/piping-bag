@@ -72,12 +72,12 @@ const main = async ([], opts: Options) => {
       credentials,
     });
 
-    const res = await uploadFunction(
+    const [_, res] = await uploadFunction(
       { name, role: pipeRole, region, handler, mem_size, timeout, code },
       lambdaClient,
     );
 
-    arn = res.FunctionArn!;
+    arn = res!.FunctionArn!;
   } catch (error: any) {
     fatal_error(error);
   }

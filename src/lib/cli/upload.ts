@@ -13,7 +13,6 @@ import {
   GetFunctionCommand,
   UpdateFunctionCodeCommand,
   UpdateFunctionConfigurationCommand,
-  waitUntilFunctionUpdatedV2,
   GetFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 
@@ -23,6 +22,7 @@ import {
   success,
   info,
   fatal_error,
+  waitUntilUpdated,
 } from "../helpers/_utils.js";
 import { RUNTIME, BUNDLE } from "../helpers/_defaults.js";
 import type { Config } from "../helpers/types.js";
@@ -188,28 +188,6 @@ export async function uploadFunction(
   },
   lambdaClient: LambdaClient,
 ) {
-  async function waitUntilUpdated<T>(
-    lambdaClientCommand: () => Promise<T>,
-  ): Promise<T> {
-    const res = await lambdaClientCommand();
-
-    await waitUntilFunctionUpdatedV2(
-      { client: lambdaClient, maxWaitTime: 60 },
-      { FunctionName: name },
-    ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
-      switch (e.state) {
-        case "TIMEOUT":
-          fatal_error(
-            "Function update to AWS Lambda timed out, please try again.",
-          );
-        case "FAILURE":
-          fatal_error("Function failed to update to AWS Lambda.");
-      }
-    });
-
-    return res;
-  }
-
   const command = new GetFunctionCommand({ FunctionName: name });
   const readHashCommand = new GetFunctionConfigurationCommand({
     FunctionName: name,
@@ -225,6 +203,7 @@ export async function uploadFunction(
     },
   );
 
+  let resCode;
   if (exists) {
     console.log(
       `Found existing deployed function, updating AWS Lambda ${name}`,
@@ -242,8 +221,10 @@ export async function uploadFunction(
 
     if (hash !== remoteHash) {
       const updateCode = new UpdateFunctionCodeCommand(params);
-      const res = await waitUntilUpdated(() => lambdaClient.send(updateCode));
-      success(`Function updated successfully: ${res.FunctionName}`);
+      resCode = await waitUntilUpdated(name, lambdaClient, () =>
+        lambdaClient.send(updateCode),
+      );
+      success(`Function updated successfully: ${resCode.FunctionName}`);
     } else {
       console.log(
         `No detected code changes for function ${name}. Skipping code update step.`,
@@ -267,10 +248,12 @@ export async function uploadFunction(
     };
 
     const updateConfig = new UpdateFunctionConfigurationCommand(configs);
-    const res = await waitUntilUpdated(() => lambdaClient.send(updateConfig));
+    const resConfig = await waitUntilUpdated(name, lambdaClient, () =>
+      lambdaClient.send(updateConfig),
+    );
 
-    success(`Configuration updated successfully: ${res.FunctionName}`);
-    return res;
+    success(`Configuration updated successfully: ${resConfig.FunctionName}`);
+    return [resCode, resConfig];
   } else {
     console.log(`Deploying AWS Lambda function ${name} at ${region}`);
 
@@ -295,6 +278,6 @@ export async function uploadFunction(
     const res = await lambdaClient.send(command);
 
     success(`Function created successfully: ${res.FunctionName}`);
-    return res;
+    return [undefined, res];
   }
 }

@@ -16,9 +16,37 @@ import "dotenv/config";
 
 import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
 import { fromEnv, fromIni } from "@aws-sdk/credential-providers";
+import {
+  waitUntilFunctionUpdatedV2,
+  type LambdaClient,
+} from "@aws-sdk/client-lambda";
 import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 
 import type { Config } from "./types.js";
+
+export async function waitUntilUpdated<T>(
+  name: string,
+  lambdaClient: LambdaClient,
+  lambdaClientCommand: () => Promise<T>,
+): Promise<T> {
+  const res = await lambdaClientCommand();
+
+  await waitUntilFunctionUpdatedV2(
+    { client: lambdaClient, maxWaitTime: 60 },
+    { FunctionName: name },
+  ).catch((e: { state: "FAILURE" | "TIMEOUT" }) => {
+    switch (e.state) {
+      case "TIMEOUT":
+        fatal_error(
+          "Function update to AWS Lambda timed out, please try again.",
+        );
+      case "FAILURE":
+        fatal_error("Function failed to update to AWS Lambda.");
+    }
+  });
+
+  return res;
+}
 
 export const get_aws_role = async (
   client: IAMClient,
