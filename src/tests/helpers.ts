@@ -21,12 +21,19 @@ export const fixtures = (subpath: string) =>
 
 export async function unpack() {}
 
+interface MockError {
+  Name: string;
+  Message: string;
+}
+
+type MockExtendedOptions = object & { CommandName?: string; Error?: MockError };
+
 interface MockLambdaOptions {
-  GetFunction?: object;
-  GetFunctionConfiguration?: object;
-  CreateFunction?: object;
-  UpdateFunctionCode?: object;
-  UpdateFunctionConfiguration?: object;
+  GetFunction?: MockExtendedOptions;
+  GetFunctionConfiguration?: MockExtendedOptions;
+  CreateFunction?: MockExtendedOptions;
+  UpdateFunctionCode?: MockExtendedOptions;
+  UpdateFunctionConfiguration?: MockExtendedOptions;
 }
 
 interface MockScheduleOptions {
@@ -48,7 +55,7 @@ export function mockLambdaClient(opts: MockLambdaOptions) {
       ...opts.GetFunctionConfiguration,
     },
     CreateFunction: {
-      CommandName: "CreateFunction",
+      CommandName: "CreateFunctionCommand",
       ...opts.CreateFunction,
     },
     UpdateFunctionCode: {
@@ -62,19 +69,48 @@ export function mockLambdaClient(opts: MockLambdaOptions) {
   };
 
   const send = mock.fn(async (command) => {
-    const { FunctionName } = command.input;
-    if (command instanceof GetFunctionCommand) return responses.GetFunction;
+    const { FunctionName, Role, Handler, MemorySize, Timeout } = command.input;
+    if (command instanceof GetFunctionCommand) {
+      if (responses.GetFunction?.Error) {
+        throw Object.assign(new Error(responses.GetFunction.Error.Message), {
+          name: responses.GetFunction.Error.Name,
+        });
+      }
+
+      return responses.GetFunction;
+    }
     if (command instanceof GetFunctionConfigurationCommand)
       return responses.GetFunctionConfiguration;
     if (command instanceof CreateFunctionCommand)
-      return responses.CreateFunction;
+      return {
+        FunctionName,
+        Role,
+        Handler,
+        MemorySize,
+        Timeout,
+        ...responses.CreateFunction,
+      };
     if (command instanceof UpdateFunctionCodeCommand)
-      return responses.UpdateFunctionCode;
+      return {
+        FunctionName,
+        Role,
+        Handler,
+        MemorySize,
+        Timeout,
+        ...responses.UpdateFunctionCode,
+      };
     if (command instanceof UpdateFunctionConfigurationCommand)
-      return responses.UpdateFunctionConfiguration;
+      return {
+        FunctionName,
+        Role,
+        Handler,
+        MemorySize,
+        Timeout,
+        ...responses.UpdateFunctionConfiguration,
+      };
   });
 
-  return send as unknown as LambdaClient;
+  return { send } as unknown as LambdaClient;
 }
 
 export function mockSchedulerClient(opts: MockScheduleOptions) {
@@ -88,7 +124,7 @@ export function mockSchedulerClient(opts: MockScheduleOptions) {
     if (command instanceof UpdateScheduleCommand) return;
   });
 
-  return send;
+  return { send };
 }
 
 export function mockS3Client(opts: MockS3Options) {
@@ -101,5 +137,5 @@ export function mockS3Client(opts: MockS3Options) {
     if (command instanceof GetObjectCommand) return;
   });
 
-  return send;
+  return { send };
 }

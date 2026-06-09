@@ -70,7 +70,14 @@ describe("Lambda function bundler", async () => {
 
 describe("Lambda function uploader", async () => {
   it("creates a new lambda function", async () => {
-    const mockClient = mockLambdaClient({});
+    const mockClient = mockLambdaClient({
+      GetFunction: {
+        Error: {
+          Name: "ResourceNotFoundException",
+          Message: "Function not found",
+        },
+      },
+    });
     const res = (await uploadFunction(
       {
         name: "scraper",
