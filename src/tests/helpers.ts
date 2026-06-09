@@ -26,7 +26,11 @@ interface MockError {
   Message: string;
 }
 
-type MockExtendedOptions = object & { CommandName?: string; Error?: MockError };
+type MockExtendedOptions = {
+  CodeSha256?: string;
+  CommandName?: string;
+  Error?: MockError;
+};
 
 interface MockLambdaOptions {
   GetFunction?: MockExtendedOptions;
