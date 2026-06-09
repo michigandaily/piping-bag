@@ -1,9 +1,11 @@
-import { zipFiles } from "../lib/cli/upload.js";
-import { fixtures } from "./helpers.js";
-
 import { mkdirSync, rmSync } from "node:fs";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert";
+
+import type { CreateFunctionCommandInput } from "@aws-sdk/client-lambda";
+
+import { uploadFunction, zipFiles } from "../lib/cli/upload.js";
+import { fixtures, mockLambdaClient } from "./helpers.js";
 
 describe("Lambda function compression with archiver", () => {
   beforeEach(() => {
@@ -67,7 +69,29 @@ describe("Lambda function bundler", async () => {
 });
 
 describe("Lambda function uploader", async () => {
-  it("creates a new lambda function", async () => {});
+  it("creates a new lambda function", async () => {
+    const mockClient = mockLambdaClient({});
+    const res = (await uploadFunction(
+      {
+        name: "scraper",
+        role: "pipe-lambda",
+        region: "us-east-2",
+        handler: "scraper.main",
+        mem_size: 512,
+        timeout: 10,
+        code: Buffer.alloc(0),
+      },
+      mockClient,
+    )) as unknown as CreateFunctionCommandInput & { CommandName: string };
+
+    assert.strictEqual(res.CommandName!, "CreateFunctionCommand");
+    assert.strictEqual(res.FunctionName, "scraper");
+    assert.strictEqual(res.Role, "pipe-lambda");
+    assert.strictEqual(res.Handler, "scraper.main");
+    assert.strictEqual(res.MemorySize, 512);
+    assert.strictEqual(res.Timeout, 10);
+  });
+
   it("updates an existing lambda function", async () => {});
   it("detects identical scripts and skips code upload step", async () => {});
   it("updates an existing lambda function configuration", async () => {});
