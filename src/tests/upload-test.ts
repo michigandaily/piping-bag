@@ -26,10 +26,17 @@ const { uploadFunction, zipFiles } = await import("../lib/cli/upload.js");
 describe("Lambda function compression with archiver", () => {
   beforeEach(() => {
     mkdirSync(fixtures("tmp"), { recursive: true });
+
+    mock.method(console, "log", () => {});
+    mock.method(console, "error", () => {});
+    mock.method(console, "warn", () => {});
+    mock.method(console, "info", () => {});
   });
 
   afterEach(() => {
     rmSync(fixtures("tmp/"), { recursive: true });
+
+    mock.restoreAll();
   });
 
   it("sucessfully compresses files", async () => {
@@ -85,6 +92,17 @@ describe("Lambda function bundler", async () => {
 });
 
 describe("Lambda function uploader", async () => {
+  beforeEach(() => {
+    mock.method(console, "log", () => {});
+    mock.method(console, "error", () => {});
+    mock.method(console, "warn", () => {});
+    mock.method(console, "info", () => {});
+  });
+
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   it("creates a new lambda function", async () => {
     const mockClient = mockLambdaClient({
       GetFunction: {
