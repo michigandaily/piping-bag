@@ -13,9 +13,9 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepare": "pnpm run build && pnpm pack",
-    "test": "node --import tsx --test src/tests/**/*-test.ts",
-    "test:file": "node --import tsx --test"
+    "prepare": "pnpm pack",
+    "test": "node --import tsx --experimental-test-module-mocks --test src/tests/**/*-test.ts",
+    "test:file": "node --import tsx --experimental-test-module-mocks --test"
   },
   "files": [
     "dist/"
@@ -50,6 +50,7 @@
     "eslint": "^10.0.2",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "unzipper": "^0.12.3"
   }
 }
