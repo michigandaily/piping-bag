@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { program } from "commander";
 
 import { IAMClient } from "@aws-sdk/client-iam";
+import { LambdaClient } from "@aws-sdk/client-lambda";
 
 import {
   load_config,
@@ -24,6 +25,7 @@ import { convertSchedulerDate } from "./lib/helpers/_time.js";
 
 import { bundleHandlers, uploadFunction } from "./lib/cli/upload.js";
 import { attachScheduler } from "./lib/cli/schedule.js";
+import { SchedulerClient } from "@aws-sdk/client-scheduler";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
@@ -65,9 +67,14 @@ const main = async ([], opts: Options) => {
       DEFAULT_PIPE_ROLE,
     );
 
+    const lambdaClient = new LambdaClient({
+      region: region,
+      credentials,
+    });
+
     const res = await uploadFunction(
       { name, role: pipeRole, region, handler, mem_size, timeout, code },
-      credentials,
+      lambdaClient,
     );
 
     arn = res.FunctionArn!;
@@ -81,6 +88,8 @@ const main = async ([], opts: Options) => {
       scheduler_role,
       DEFAULT_SCHEDULER_ROLE,
     );
+    const schedulerClient = new SchedulerClient({ region, credentials });
+
     await attachScheduler(
       {
         arn: arn!,
@@ -92,7 +101,7 @@ const main = async ([], opts: Options) => {
         rate,
         enable: true,
       },
-      credentials,
+      schedulerClient,
     );
   } catch (error: any) {
     fatal_error(error);

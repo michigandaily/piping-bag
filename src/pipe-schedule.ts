@@ -20,6 +20,7 @@ import { convertSchedulerDate } from "./lib/helpers/_time.js";
 import type { Options } from "./lib/helpers/types.js";
 
 import { attachScheduler } from "./lib/cli/schedule.js";
+import { SchedulerClient } from "@aws-sdk/client-scheduler";
 
 const main = async (args: string[], opts: Options) => {
   const [liveness] = args;
@@ -65,6 +66,8 @@ const main = async (args: string[], opts: Options) => {
       scheduler_role,
       DEFAULT_SCHEDULER_ROLE,
     );
+    const schedulerClient = new SchedulerClient({ region, credentials });
+
     await attachScheduler(
       {
         arn: arn!,
@@ -76,7 +79,7 @@ const main = async (args: string[], opts: Options) => {
         rate,
         enable: liveness != "disable",
       },
-      credentials,
+      schedulerClient,
     );
   } catch (error: any) {
     fatal_error(error);

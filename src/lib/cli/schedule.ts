@@ -32,10 +32,9 @@ export async function attachScheduler(
     rate: string;
     enable: boolean;
   },
-  credentials: AwsCredentialIdentityProvider,
+  schedulerClient: SchedulerClient,
 ) {
   console.log(`Attaching EventBridge Scheduler for deployed function ${name}`);
-  const schedulerClient = new SchedulerClient({ region, credentials });
   const schedulerName = `${name}-schedule`;
 
   const exists = await schedulerClient
