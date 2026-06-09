@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, rmSync } from "node:fs";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert";
@@ -9,6 +10,7 @@ import type {
 } from "@aws-sdk/client-lambda";
 
 import { fixtures, mockLambdaClient } from "./helpers.js";
+
 mock.module("../lib/helpers/_utils.js", {
   namedExports: {
     ...(await import("../lib/helpers/_utils.js")),
@@ -147,9 +149,11 @@ describe("Lambda function uploader", async () => {
   });
 
   it("detects identical scripts and skips code upload step", async () => {
+    const code = Buffer.from("console.log('Hello World')");
+    const hash = createHash("sha256").update(code).digest("base64");
     const mockClient = mockLambdaClient({
       GetFunctionConfiguration: {
-        CodeSha256: "mock-hash-sha-256",
+        CodeSha256: hash,
       },
     });
     const [resCode, resConfig] = (await uploadFunction(
@@ -160,7 +164,7 @@ describe("Lambda function uploader", async () => {
         handler: "scraper.main",
         mem_size: 512,
         timeout: 10,
-        code: Buffer.alloc(0),
+        code: code,
       },
       mockClient,
     )) as unknown as [
@@ -169,7 +173,10 @@ describe("Lambda function uploader", async () => {
     ];
 
     assert.strictEqual(resCode, undefined);
-    assert.strictEqual(resConfig.CommandName, "UpdateFunctionCodeCommand");
+    assert.strictEqual(
+      resConfig.CommandName,
+      "UpdateFunctionConfigurationCommand",
+    );
     assert.strictEqual(resConfig.FunctionName, "scraper");
     assert.strictEqual(
       resConfig.CommandName,
