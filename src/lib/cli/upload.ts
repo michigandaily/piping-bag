@@ -140,7 +140,7 @@ export async function bundleHandlers(
         "Javascript file detected. Bundling via esbuild to include dependencies...",
       );
 
-      const bundleFile = `tmp/${basename(file, extname(file))}.js`;
+      const bundleFile = `${zip_dir}/${basename(file, extname(file))}.js`;
 
       await esbuild.build({
         entryPoints: [file],
