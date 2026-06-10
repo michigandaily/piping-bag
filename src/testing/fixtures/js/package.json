@@ -10,6 +10,6 @@
     "eslint": "^10.0.2"
   },
   "dependencies": {
-    "piping-bag": "file:../../../../../piping-bag"
+    "piping-bag": "workspace:*"
   }
 }
