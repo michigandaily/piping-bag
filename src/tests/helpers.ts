@@ -1,5 +1,8 @@
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { mock } from "node:test";
+
+import { unzipSync } from "fflate";
 
 import {
   CreateFunctionCommand,
@@ -17,9 +20,24 @@ import {
 import { GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 export const fixtures = (subpath: string) =>
-  `${path.resolve(import.meta.dirname, "fixtures")}/${subpath}`;
+  path.relative(
+    process.cwd(),
+    path.resolve(import.meta.dirname, "fixtures", subpath),
+  );
 
-export async function unpack() {}
+export function unpack(path: string) {
+  const zip = readFileSync(path);
+  const unzipped = unzipSync(zip);
+  Object.entries(unzipped).forEach(([path, array]) => {
+    unzipped[path] = Buffer.from(
+      array.buffer,
+      array.byteOffset,
+      array.byteLength,
+    );
+  });
+
+  return unzipped as Record<string, Buffer>;
+}
 
 interface MockError {
   Name: string;

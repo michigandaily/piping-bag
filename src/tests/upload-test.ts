@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert";
 
@@ -9,7 +9,7 @@ import type {
   UpdateFunctionConfigurationCommandOutput,
 } from "@aws-sdk/client-lambda";
 
-import { fixtures, mockLambdaClient } from "./helpers.js";
+import { fixtures, mockLambdaClient, unpack } from "./helpers.js";
 
 mock.module("../lib/helpers/_utils.js", {
   namedExports: {
@@ -45,8 +45,14 @@ describe("Lambda function compression with archiver", () => {
       buffers: [],
       outputDir: fixtures("tmp/basic.zip"),
     });
+    const unzipped = unpack(fixtures("tmp/basic.zip"));
+    const expected = readFileSync(fixtures("basic/pipe.config.json"));
 
     assert.strictEqual(dir, fixtures("tmp/basic.zip"));
+    assert.strictEqual(
+      unzipped["pipe.config.json"]?.toString("ascii"),
+      expected.toString("ascii"),
+    );
   });
 
   it("successfully compresses directories", async () => {
@@ -55,36 +61,72 @@ describe("Lambda function compression with archiver", () => {
       buffers: [],
       outputDir: fixtures("tmp/basic.zip"),
     });
+    const unzipped = unpack(fixtures("tmp/basic.zip"));
+    const expected = readFileSync(fixtures("basic/pipe.config.json"));
 
     assert.strictEqual(dir, fixtures("tmp/basic.zip"));
+    assert.strictEqual(
+      unzipped[fixtures("basic/pipe.config.json")]?.toString("ascii"),
+      expected.toString("ascii"),
+    );
   });
 
   it("successfully compresses buffers", async () => {
+    const body = JSON.stringify({ key: "value" });
     const dir = await zipFiles({
       files: [],
-      buffers: [
-        { name: "pipe.config.json", body: JSON.stringify({ key: "value" }) },
-      ],
+      buffers: [{ name: "pipe.config.json", body }],
       outputDir: fixtures("tmp/basic.zip"),
     });
+    const unzipped = unpack(fixtures("tmp/basic.zip"));
 
     assert.strictEqual(dir, fixtures("tmp/basic.zip"));
+    assert.strictEqual(unzipped["pipe.config.json"]?.toString("ascii"), body);
   });
 
   it("successfully compresses all data formats", async () => {
+    const body = JSON.stringify({ key: "value" });
     const dir = await zipFiles({
       files: [fixtures("basic/pipe.config.json"), fixtures("basic")],
       buffers: [
-        { name: "pipe.config.json", body: JSON.stringify({ key: "value" }) },
+        {
+          name: "example.pipe.config.json",
+          body,
+        },
       ],
       outputDir: fixtures("tmp/basic.zip"),
     });
+    const unzipped = unpack(fixtures("tmp/basic.zip"));
+    const expected = readFileSync(fixtures("basic/pipe.config.json"));
 
     assert.strictEqual(dir, fixtures("tmp/basic.zip"));
+    assert.strictEqual(
+      unzipped["pipe.config.json"]?.toString("ascii"),
+      expected.toString("ascii"),
+    );
+    assert.strictEqual(
+      unzipped[fixtures("basic/pipe.config.json")]?.toString("ascii"),
+      expected.toString("ascii"),
+    );
+    assert.strictEqual(
+      unzipped["example.pipe.config.json"]?.toString("ascii"),
+      body,
+    );
   });
 });
 
 describe("Lambda function bundler", async () => {
+  beforeEach(() => {
+    mock.method(console, "log", () => {});
+    mock.method(console, "error", () => {});
+    mock.method(console, "warn", () => {});
+    mock.method(console, "info", () => {});
+  });
+
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
   it("exits when no zip directory is specified", async () => {});
   it("exits when specified lambda script does not exist", async () => {});
   it("successfully bundles javascript files", async () => {});
