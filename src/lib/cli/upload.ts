@@ -27,6 +27,8 @@ import {
 import { RUNTIME, BUNDLE } from "../helpers/_defaults.js";
 import type { Config } from "../helpers/types.js";
 
+// TODO: refactor zip functionality to use fflate instead of archiver
+// consider fflate stability before migrating libraries
 export async function zipFiles({
   files,
   buffers,
