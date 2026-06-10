@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, promises, createWriteStream } from "node:fs";
-import { basename, dirname, extname } from "node:path";
+import path, { basename, dirname, extname } from "node:path";
 import { createHash } from "node:crypto";
 
 import { select } from "@inquirer/prompts";
@@ -140,7 +140,7 @@ export async function bundleHandlers(
         "Javascript file detected. Bundling via esbuild to include dependencies...",
       );
 
-      const bundleFile = `dist/${basename(file, extname(file))}.js`;
+      const bundleFile = `tmp/${basename(file, extname(file))}.js`;
 
       await esbuild.build({
         entryPoints: [file],
