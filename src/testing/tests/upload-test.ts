@@ -1,5 +1,7 @@
+import path from "node:path";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert";
 
@@ -9,11 +11,12 @@ import type {
   UpdateFunctionConfigurationCommandOutput,
 } from "@aws-sdk/client-lambda";
 
-import { fixtures, mockLambdaClient, unpack } from "./helpers.js";
+import { fixtures, mockLambdaClient, unpack } from "../helpers.js";
+import { load_config } from "../../lib/helpers/_utils.js";
 
-mock.module("../lib/helpers/_utils.js", {
+mock.module("../../lib/helpers/_utils.js", {
   namedExports: {
-    ...(await import("../lib/helpers/_utils.js")),
+    ...(await import("../../lib/helpers/_utils.js")),
     waitUntilUpdated: async (
       _: string,
       __: string,
@@ -21,7 +24,8 @@ mock.module("../lib/helpers/_utils.js", {
     ) => lambdaClientCommand(),
   },
 });
-const { uploadFunction, zipFiles } = await import("../lib/cli/upload.js");
+const { zipFiles, bundleHandlers, uploadFunction } =
+  await import("../../lib/cli/upload.js");
 
 describe("Lambda function compression with archiver", () => {
   beforeEach(() => {
@@ -117,6 +121,12 @@ describe("Lambda function compression with archiver", () => {
 
 describe("Lambda function bundler", async () => {
   beforeEach(() => {
+    execSync("pnpm run build", {
+      cwd: path.resolve(import.meta.dirname, ""),
+      stdio: "pipe",
+    });
+    execSync("pnpm install", { cwd: fixtures("js"), stdio: "pipe" });
+
     mock.method(console, "log", () => {});
     mock.method(console, "error", () => {});
     mock.method(console, "warn", () => {});
@@ -127,9 +137,65 @@ describe("Lambda function bundler", async () => {
     mock.restoreAll();
   });
 
-  it("exits when no zip directory is specified", async () => {});
-  it("exits when specified lambda script does not exist", async () => {});
-  it("successfully bundles javascript files", async () => {});
+  it(
+    "exits when no zip directory is specified",
+    {
+      expectFailure: {
+        label: "zip directory not specified",
+        match:
+          /Zip directory destination path is not defined in pipe configuration/,
+      },
+    },
+    async () => {
+      const { config } = (await load_config(fixtures("js/pipe.config.js")))!;
+      await bundleHandlers(
+        {
+          path: fixtures("js/example.js"),
+          handler: "example.main",
+          zip_dir: "",
+        },
+        config,
+      );
+    },
+  );
+
+  it(
+    "exits when specified lambda script does not exist",
+    {
+      expectFailure: {
+        label:
+          "specified path not specified and given handler file does not exist",
+        match:
+          /No files found for provided handler, please provide a valid path or handler in the pipe configuration./,
+      },
+    },
+    async () => {
+      const { config } = (await load_config(fixtures("js/pipe.config.js")))!;
+      await bundleHandlers(
+        {
+          path: "",
+          handler: "null.main",
+          zip_dir: fixtures("tmp"),
+        },
+        config,
+      );
+    },
+  );
+
+  it("successfully bundles javascript files", async () => {
+    const { config } = (await load_config(fixtures("js/pipe.config.js")))!;
+    const lambdaDir = await bundleHandlers(
+      {
+        path: fixtures("js/example.js"),
+        handler: "example.main",
+        zip_dir: fixtures("tmp"),
+      },
+      config,
+    );
+
+    assert.strictEqual(lambdaDir, fixtures("tmp/example.zip"));
+  });
+
   it("skips .zip files", async () => {});
 });
 

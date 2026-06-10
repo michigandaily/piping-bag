@@ -1,0 +1,15 @@
+{
+  "name": "example",
+  "version": "0.0.1",
+  "description": "Example scraper script in javascript for testing",
+  "author": {
+    "name": "Marie Yu"
+  },
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^10.0.2"
+  },
+  "dependencies": {
+    "piping-bag": "file:../../../../../piping-bag"
+  }
+}
