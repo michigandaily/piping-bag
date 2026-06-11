@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, promises, createWriteStream } from "node:fs";
-import path, { basename, dirname, extname } from "node:path";
+import { basename, dirname, extname } from "node:path";
 import { createHash } from "node:crypto";
 
 import { select } from "@inquirer/prompts";
