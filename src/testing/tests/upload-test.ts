@@ -157,7 +157,7 @@ describe("Lambda function bundler", () => {
     });
   });
 
-  it("exits when specified lambda script does not exist", async () => {
+  it("exits when lambda script is not specified", async () => {
     assert.rejects(async () => {
       await bundleHandlers(
         {
@@ -170,20 +170,75 @@ describe("Lambda function bundler", () => {
     });
   });
 
+  it("exits when lambda script is specified but does not exist in directory", async () => {
+    assert.rejects(async () => {
+      await bundleHandlers(
+        {
+          path: fixtures("js/null.js"),
+          handler: "null.main",
+          zip_dir: fixtures("tmp"),
+        },
+        {} as unknown as Config,
+      );
+    });
+  });
+
   it("successfully bundles javascript files", async () => {
+    const body = { key: "value" };
     const lambdaDir = await bundleHandlers(
       {
         path: fixtures("js/example.js"),
         handler: "example.main",
         zip_dir: fixtures("tmp"),
       },
-      { key: "value" } as unknown as Config,
+      body as unknown as Config,
     );
+    const unzipped = unpack(fixtures("tmp/example.zip"));
+    const expected = readFileSync(fixtures("tmp/example.js"));
 
     assert.strictEqual(lambdaDir, fixtures("tmp/example.zip"));
+    assert.strictEqual(
+      unzipped["example.js"]?.toString("ascii"),
+      expected.toString("ascii"),
+    );
+    assert.strictEqual(
+      unzipped["pipe.config.json"]?.toString("ascii"),
+      JSON.stringify(body),
+    );
   });
 
-  it("skips .zip files", async () => {});
+  it("skips .zip files", async () => {
+    const body = { key: "value" };
+    await bundleHandlers(
+      {
+        path: fixtures("js/example.js"),
+        handler: "example.main",
+        zip_dir: fixtures("tmp"),
+      },
+      body as unknown as Config,
+    );
+    const expected = readFileSync(fixtures("tmp/example.js"));
+
+    const lambdaDir = await bundleHandlers(
+      {
+        path: fixtures("tmp/example.zip"),
+        handler: "example.main",
+        zip_dir: fixtures("tmp"),
+      },
+      { key: "value" } as unknown as Config,
+    );
+    const unzipped = unpack(fixtures("tmp/example.zip"));
+
+    assert.strictEqual(lambdaDir, fixtures("tmp/example.zip"));
+    assert.strictEqual(
+      unzipped["example.js"]?.toString("ascii"),
+      expected.toString("ascii"),
+    );
+    assert.strictEqual(
+      unzipped["pipe.config.json"]?.toString("ascii"),
+      JSON.stringify(body),
+    );
+  });
 });
 
 describe("Lambda function uploader", () => {
