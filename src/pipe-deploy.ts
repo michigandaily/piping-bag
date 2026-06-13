@@ -5,6 +5,7 @@ import { program } from "commander";
 
 import { IAMClient } from "@aws-sdk/client-iam";
 import { LambdaClient } from "@aws-sdk/client-lambda";
+import { SchedulerClient } from "@aws-sdk/client-scheduler";
 
 import {
   load_config,
@@ -25,7 +26,6 @@ import { convertSchedulerDate } from "./lib/helpers/_time.js";
 
 import { bundleHandlers, uploadFunction } from "./lib/cli/upload.js";
 import { attachScheduler } from "./lib/cli/schedule.js";
-import { SchedulerClient } from "@aws-sdk/client-scheduler";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
@@ -52,7 +52,7 @@ const main = async ([], opts: Options) => {
   const credentials = await get_aws_credentials(profile);
 
   const roleClient = new IAMClient({
-    region: region,
+    region,
     credentials,
   });
 

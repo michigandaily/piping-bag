@@ -54,7 +54,7 @@ const main = async ([], opts: Options) => {
     );
 
     const lambdaClient = new LambdaClient({
-      region: region,
+      region,
       credentials,
     });
 
