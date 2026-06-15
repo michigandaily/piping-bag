@@ -37,7 +37,7 @@ export async function pipe(payload: string, format: string = ".json") {
 
   try {
     const metadata = {
-      latest: `${key}/${format}`,
+      latest: key,
       bucket,
       region,
     };
