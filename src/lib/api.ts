@@ -40,6 +40,12 @@ export class PipeClient {
 
     this.client = new S3Client({
       region,
+      // An empty credentials object is required to prevent
+      // a credentials error
+      credentials: {
+        accessKeyId: "",
+        secretAccessKey: "",
+      },
       signer: { sign: async (request) => request },
     });
   }
@@ -73,14 +79,12 @@ export class PipeClient {
           this.data = Object.assign(this.data, entry);
           this.emitter.emit(type, entry);
         case PollingType.Timeline:
-          // FIXME: instead of current - interval, find the most recent timestamp
-          // within the existing data. In timeline cases, we want all data collected.
-          // The current implementation only fetches data within the polling period.
+          const recent = Math.max(...Object.keys(this.data).map((k) => +k), 0);
           const entries = await PipeClient.fetchRange(
             this.client,
             this.name,
             this.bucket,
-            [currentUnix() - interval, currentUnix()],
+            [recent, currentUnix()],
           );
 
           this.data = Object.assign(this.data, ...entries);
@@ -92,14 +96,14 @@ export class PipeClient {
   }
 
   endPoll() {
-    // TODO: if possible and idiomatic, clean up event emitter
-    // as well.
     clearInterval(this.poller);
     this.emitter.removeAllListeners();
   }
 
-  listen(id: string, callback: (event: any[]) => {}) {
-    this.startPoll().on(id, callback);
+  listen(id: PollingType, interval: number, callback: (event: any[]) => {}) {
+    this.startPoll(id, interval).on(id, (event: any[]) => {
+      callback(event);
+    });
   }
 
   static async fetch(client: S3Client, bucket: string, key: string) {
@@ -113,7 +117,10 @@ export class PipeClient {
       .Body!.transformToString()
       .then((data) => JSON.parse(data));
 
-    return { timestamp: +key, data: payload };
+    const filename = key.split("/").at(-1);
+    const [timestamp] = filename!.split(".");
+
+    return { timestamp: +timestamp!, ...payload };
   }
 
   static async fetchRange(
@@ -131,12 +138,18 @@ export class PipeClient {
     try {
       const res = await client.send(
         new ListObjectsV2Command({
-          Bucket: `bucket/${name}`,
+          Bucket: `${bucket}`,
+          Prefix: `pipe/${name}/`,
         }),
       );
 
       const entries = res.Contents!.filter((entry) => {
-        const [timestamp] = entry.Key!.split(".");
+        const filename = entry.Key!.split("/").at(-1);
+        const [timestamp] = filename!.split(".");
+        if (timestamp === "metadata") {
+          return false;
+        }
+
         return timestamp && +timestamp >= start && +timestamp <= end;
       });
 
