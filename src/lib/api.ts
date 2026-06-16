@@ -7,7 +7,12 @@ import {
 import EventEmitter from "node:events";
 
 import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "./helpers/_defaults.js";
-import { type SchedulerDate, PollingType } from "./helpers/types.js";
+import {
+  type PipeData,
+  type PipeMetadata,
+  type SchedulerDate,
+  PollingType,
+} from "./helpers/types.js";
 import { currentUnix, toUnix } from "./helpers/_time.js";
 
 export class PipeClient {
@@ -78,6 +83,7 @@ export class PipeClient {
 
           this.data = Object.assign(this.data, entry);
           this.emitter.emit(type, entry);
+          break;
         case PollingType.Timeline:
           const recent = Math.max(...Object.keys(this.data).map((k) => +k), 0);
           const entries = await PipeClient.fetchRange(
@@ -88,7 +94,8 @@ export class PipeClient {
           );
 
           this.data = Object.assign(this.data, ...entries);
-          this.emitter.emit(type, this.getData());
+          this.emitter.emit(type, this.data);
+          break;
       }
     }, interval);
 
@@ -106,14 +113,18 @@ export class PipeClient {
     });
   }
 
-  static async fetch(client: S3Client, bucket: string, key: string) {
-    const latest = await client.send(
+  static async fetch(
+    client: S3Client,
+    bucket: string,
+    key: string,
+  ): Promise<PipeData> {
+    const object = await client.send(
       new GetObjectCommand({
         Bucket: bucket,
         Key: key,
       }),
     );
-    const payload = await latest
+    const payload = await object
       .Body!.transformToString()
       .then((data) => JSON.parse(data));
 
@@ -121,6 +132,25 @@ export class PipeClient {
     const [timestamp] = filename!.split(".");
 
     return { timestamp: +timestamp!, ...payload };
+  }
+
+  static async fetchMetadata(
+    client: S3Client,
+    name: string,
+    bucket: string,
+  ): Promise<PipeMetadata> {
+    const key = `pipe/${name}/metadata.json`;
+    const object = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+    const payload = await object
+      .Body!.transformToString()
+      .then((data) => JSON.parse(data));
+
+    return payload;
   }
 
   static async fetchRange(
@@ -149,7 +179,6 @@ export class PipeClient {
         if (timestamp === "metadata") {
           return false;
         }
-
         return timestamp && +timestamp >= start && +timestamp <= end;
       });
 
@@ -157,19 +186,20 @@ export class PipeClient {
         PipeClient.fetch(client, bucket, entry.Key!),
       );
 
-      return Promise.all(promises);
+      return Promise.all(promises).then((entries: PipeData[]) =>
+        entries.map((entry) => ({ [entry.timestamp]: entry.data })),
+      );
     } catch (err: any) {
       throw Error(`pipeFetch Error: ${err}`);
     }
   }
 
   static async fetchLatest(client: S3Client, name: string, bucket: string) {
-    const metadataKey = `pipe/${name}/metadata.json`;
     try {
-      const { data } = await PipeClient.fetch(client, bucket, metadataKey);
-      const payload = await PipeClient.fetch(client, bucket, data.latest);
+      const { latest } = await PipeClient.fetchMetadata(client, name, bucket);
+      const payload = await PipeClient.fetch(client, bucket, latest);
 
-      return payload;
+      return { [payload.timestamp]: payload.data };
     } catch (err: any) {
       throw Error(`pipeFetchLatest Error: ${err}`);
     }

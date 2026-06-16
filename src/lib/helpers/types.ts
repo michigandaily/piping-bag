@@ -34,6 +34,15 @@ export type SchedulerDate = {
   year?: number;
 };
 
+export type PipeData = {
+  timestamp: number;
+  data: any;
+};
+
+export type PipeMetadata = {
+  latest: string;
+};
+
 export enum PollingType {
   Latest = "update",
   Timeline = "change",
