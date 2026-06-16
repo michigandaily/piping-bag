@@ -13,10 +13,10 @@ Run `pnpm install michigandaily/piping-bag` to get the current state of `piping-
 
 ## Usage
 
-piping-bag has three use cases that tie together the core functionality of data collection and display from external sources:
+piping-bag has three use cases that tie together the core functionality of data collection and display:
 
-1. Deployment of a remote script that scrapes from an external sources
-2. Storage of the data collected in a structure format
+1. Deployment of a remote script that scrapes or fetches from external sources
+2. Storage of the data collected in a structured format
 3. Pulling the data from storage in a structured format
 
 The next sections show how to use the piping-bag interface to accomplish these steps.
@@ -30,6 +30,8 @@ S3 via your scraper, use the pipe() helper function:
 import { pipe } from "piping-bag/lib/schema";
 
 await pipe(JSON.stringify(payload), ".json");
+// Creates a file in S3 titled something like
+// [current_unix_timestamp].json with contents of payload
 ```
 
 ## Fetching and Pulling

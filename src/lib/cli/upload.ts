@@ -113,20 +113,17 @@ export async function bundleHandlers(
   if (!existsSync(file)) {
     fatal_error("File path defined in pipe configuration does not exist.");
   }
-
   // TODO: Create a unique temporary filename that auto-cleans if zip destination path is not defined
   if (!zip_dir || zip_dir.length === 0) {
     fatal_error(
       "Zip directory destination path is not defined in pipe configuration",
     );
   }
-
   if (!existsSync(zip_dir)) {
     mkdirSync(zip_dir, { recursive: true });
   }
 
   let lambdaDir: string;
-
   if (extname(file) !== ".zip") {
     console.log(
       `Zipping provided file ${basename(file)} from file ${dirname(file)}`,
