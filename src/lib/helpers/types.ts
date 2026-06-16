@@ -1,21 +1,21 @@
 export type Config = {
+  name: string;
+  region: string;
+  profile: string;
   deployment: {
-    name: string;
-    region: string;
     handler: string;
     path: string;
     zip_dir: string;
     mem_size: number;
     timeout: number;
-    profile: string;
     pipe_role: string;
   };
   schedule: {
     start: SchedulerDate;
     end: SchedulerDate;
     rate: string;
-    scheduler_role: string;
     timezone: string;
+    scheduler_role: string;
   };
   schema: {
     bucket: string;

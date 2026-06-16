@@ -29,16 +29,13 @@ import { attachScheduler } from "./lib/cli/schedule.js";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
-
+  const { name, region = DEFAULT_REGION, profile } = config;
   const {
-    name,
-    region = DEFAULT_REGION,
     handler,
     path,
     zip_dir,
     mem_size = MEMSIZE.DEFAULT,
     timeout = TIMEOUT.DEFAULT,
-    profile,
     pipe_role,
   } = config.deployment;
   const {

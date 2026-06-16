@@ -15,6 +15,11 @@ import {
 } from "./helpers/types.js";
 import { currentUnix, toUnix } from "./helpers/_time.js";
 
+/**
+ * A polling client wrapper around the S3 API. Allows
+ * registering listeners to poll a specified S3 directory
+ * at a fixed interval.
+ */
 export class PipeClient {
   client: S3Client;
   name: string;
@@ -25,6 +30,12 @@ export class PipeClient {
   poller!: ReturnType<typeof setInterval>;
   emitter!: EventEmitter;
 
+  /**
+   * @param name - The name of the piping-bag pipeline
+   * @param region - The AWS region the pipeline is deployed at
+   * @param bucket - The S3 bucket where the data is stored
+   * @param useCache - Optional flag on whether to use the browser cache. Defaults to true.
+   */
   constructor({
     name,
     region = DEFAULT_REGION,
@@ -55,6 +66,10 @@ export class PipeClient {
     });
   }
 
+  /**
+   * @param id - Optional parameter that defines a specific timestamp to return.
+   * If not provided all fetched data is returned.
+   */
   getData(id?: number) {
     if (id) {
       return this.data[id];
@@ -62,11 +77,19 @@ export class PipeClient {
     return this.data;
   }
 
+  /**
+   * Clears all stored data that was fetched from S3. Also clears the browser cache.
+   */
   clearData() {
     // TODO: clear browser/clientside cache
     this.data = {};
   }
 
+  /**
+   * @param type - Defines the polling type. Timeline ("change") fetches the entire
+   * timeline of data while Latest ("update") fetches the file with the latest timestamp
+   * @param interval - Defines the frequency interval which data from S3 is polled in milliseconds
+   */
   startPoll(type: PollingType = PollingType.Latest, interval: number = 50000) {
     this.emitter = new EventEmitter();
 
@@ -102,17 +125,48 @@ export class PipeClient {
     return this.emitter;
   }
 
+  /**
+   * Ends a poll if started. Stops all scheduled S3 fetches and removes all listeners.
+   */
   endPoll() {
     clearInterval(this.poller);
     this.emitter.removeAllListeners();
   }
 
+  /**
+   * @param id - Defines the polling type. Timeline ("change") fetches the entire
+   * timeline of data while Latest ("update") fetches the file with the latest timestamp
+   * @param interval - Defines the frequency interval which data from S3 is polled in milliseconds
+   * @param callback - A callback function that fires every time the data is polled and updated.
+   * Use this to redraw/update a live display of the data.
+   */
   listen(id: PollingType, interval: number, callback: (event: any[]) => {}) {
     this.startPoll(id, interval).on(id, (event: any[]) => {
       callback(event);
     });
   }
 
+  /**
+  * A static member function for fetching straight from S3. It is recommneded 
+  * you use the listener API, which uses these functions and handles configuration details for you.
+  * However, these static functions can be used if you would like a more flexible/low level API.
+  * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
+  * Do not expose AWS credentials to the client.
+  * @param bucket - Specifies the S3 bucket to fetch from.
+  * @param key - Specifies the key to fetch from.
+  * @example 
+  * const client = new S3Client({
+      region,
+      // An empty credentials object is required to prevent
+      // a credentials error
+      credentials: {
+        accessKeyId: "",
+        secretAccessKey: "",
+      },
+      signer: { sign: async (request) => request },
+    });
+    const data = await PipeClient.fetch(client, bucket, key)
+  */
   static async fetch(
     client: S3Client,
     bucket: string,
@@ -134,6 +188,28 @@ export class PipeClient {
     return { timestamp: +timestamp!, ...payload };
   }
 
+  /**
+  * A static member function for fetching straight from S3. It is recommneded 
+  * you use the listener API, which uses these functions and handles configuration details for you.
+  * However, these static functions can be used if you would like a more flexible/low level API.
+  * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
+  * Do not expose AWS credentials to the client.
+  * @param name - Specifies the name of the piping-bag pipeline.
+  * @param bucket - Specifies the S3 bucket to fetch from.
+  * @example 
+  * const client = new S3Client({
+      region,
+      // An empty credentials object is required to prevent
+      // a credentials error
+      credentials: {
+        accessKeyId: "",
+        secretAccessKey: "",
+      },
+      signer: { sign: async (request) => request },
+    });
+    const data = await PipeClient.fetchMetadata(client, name, bucket)
+  *
+  */
   static async fetchMetadata(
     client: S3Client,
     name: string,
@@ -153,6 +229,29 @@ export class PipeClient {
     return payload;
   }
 
+  /**
+  * A static member function for fetching straight from S3. It is recommneded 
+  * you use the listener API, which uses these functions and handles configuration details for you.
+  * However, these static functions can be used if you would like a more flexible/low level API.
+  * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
+  * Do not expose AWS credentials to the client.
+  * @param name - Specifies the name of the piping-bag pipeline.
+  * @param bucket - Specifies the S3 bucket to fetch from.
+  * @param range - Specifies the the time range in which all files written during will be returned
+  * @param timezone - Specifies the timezone of the provided date range
+  * @example 
+  * const client = new S3Client({
+      region,
+      // An empty credentials object is required to prevent
+      // a credentials error
+      credentials: {
+        accessKeyId: "",
+        secretAccessKey: "",
+      },
+      signer: { sign: async (request) => request },
+    });
+    const data = await PipeClient.fetch(client, bucket, key)
+  */
   static async fetchRange(
     client: S3Client,
     name: string,
@@ -194,6 +293,27 @@ export class PipeClient {
     }
   }
 
+  /**
+  * A static member function for fetching straight from S3. It is recommneded 
+  * you use the listener API, which uses these functions and handles configuration details for you.
+  * However, these static functions can be used if you would like a more flexible/low level API.
+  * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
+  * Do not expose AWS credentials to the client.
+  * @param name - Specifies the name of the piping-bag pipeline.
+  * @param bucket - Specifies the S3 bucket to fetch from.
+  * @example 
+  * const client = new S3Client({
+      region,
+      // An empty credentials object is required to prevent
+      // a credentials error
+      credentials: {
+        accessKeyId: "",
+        secretAccessKey: "",
+      },
+      signer: { sign: async (request) => request },
+    });
+    const data = await PipeClient.fetch(client, bucket, key)
+  */
   static async fetchLatest(client: S3Client, name: string, bucket: string) {
     try {
       const { latest } = await PipeClient.fetchMetadata(client, name, bucket);

@@ -26,7 +26,7 @@ const main = async (args: string[], opts: Options) => {
   const [liveness] = args;
   const { config } = (await load_config(opts.config))!;
 
-  const { name, region = DEFAULT_REGION, profile } = config.deployment;
+  const { name, region = DEFAULT_REGION, profile } = config;
   const {
     start,
     end,

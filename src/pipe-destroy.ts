@@ -12,8 +12,7 @@ import { destroyResources } from "./lib/cli/destroy.js";
 
 const main = async ([], opts: Options) => {
   const { config } = (await load_config(opts.config))!;
-
-  const { name, region = DEFAULT_REGION, profile } = config.deployment;
+  const { name, region = DEFAULT_REGION, profile } = config;
   const credentials = await get_aws_credentials(profile);
 
   try {

@@ -4,6 +4,11 @@ import { Temporal } from "@js-temporal/polyfill";
 import { load_config } from "./helpers/_utils.js";
 import { DEFAULT_REGION } from "./helpers/_defaults.js";
 
+/**
+ * @param payload - Raw data passed as a string that contains the file contents
+ * @param format - Defines the filetype of the payload
+ * @throws {Error} If storing data or metadata in S3 bucket fails
+ */
 export async function pipe(payload: string, format: string = ".json") {
   // NoOp and log on dev environments
   if (process.env.STAGE !== "production") {
@@ -13,8 +18,7 @@ export async function pipe(payload: string, format: string = ".json") {
 
   // Production S3 Upload
   const { config } = (await load_config())!;
-
-  const { name, region = DEFAULT_REGION } = config.deployment;
+  const { name, region = DEFAULT_REGION } = config;
   const { bucket } = config.schema;
   const key = `pipe/${name}/${Temporal.Now.instant().epochMilliseconds}${format}`;
 
