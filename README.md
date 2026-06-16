@@ -1,6 +1,6 @@
 # piping-bag
 
-> An standardized elections data pipeline for The Michigan Daily
+> A standardized data streaming pipeline for The Michigan Daily
 
 A standardized way to set up data scrapers and pull/refine data for The Michigan Daily. This can be seen as a sibling script of [michigandaily/sink](https://github.com/michigandaily/sink).
 
@@ -9,7 +9,55 @@ A standardized way to set up data scrapers and pull/refine data for The Michigan
 
 ## Installation
 
-Run `pnpm install -D michigandaily/piping-bag` to get the current state of `piping-bag`. The project is being developed, so there are no official releases so far.
+Run `pnpm install michigandaily/piping-bag` to get the current state of `piping-bag`. The project is being developed, so there are no official releases so far.
+
+## Usage
+
+piping-bag has three use cases that tie together the core functionality of data collection and display from external sources:
+
+1. Deployment of a remote script that scrapes from an external sources
+2. Storage of the data collected in a structure format
+3. Pulling the data from storage in a structured format
+
+The next sections show how to use the piping-bag interface to accomplish these steps.
+
+## Scraping
+
+piping-bag supports writing your own scraping script and uploading data in a scheduled manner to S3. In order to input JSON data keyed by timestamp into
+S3 via your scraper, use the pipe() helper function:
+
+```javascript
+import { pipe } from "piping-bag/lib/schema";
+
+await pipe(JSON.stringify(payload), ".json");
+```
+
+## Fetching and Pulling
+
+piping-bag also has API support for fetching from S3. If you use pipe() in your scraper, your data will automatically be formatted to be fetched properly.
+To use piping-bag's API for S3 fetching, create an instance of PipeClient:
+
+```javascript
+import { PipeClient } from "piping-bag/lib/api";
+
+const client = new PipeClient({ name, region, bucket });
+```
+
+You can then use PipeClient to begin polling for real time updates:
+
+```javascript
+// Listens for updates every 5 seconds and returns the file with
+// the latest timestamp
+client.listen("update", 5000, (data) => {
+  console.log(data);
+});
+
+//Listens for changes every 5 seconds and returns the entire
+// timeline of changes, every file and timestamp.
+client.listen("change", 5000, (data) => {
+  console.log(data);
+});
+```
 
 ## Deployment
 
@@ -79,17 +127,17 @@ For local development, you can symlink to your local version of `pipng-bag` with
 ## Milestones
 
 - M1 - Naive upload script (.zip) to AWS Lambda and AWS EventBridge ✅️
-- M2 - Naive helper function to pipe scraper data into an AWS S3 bucket
+- M2 - Naive helper function to pipe scraper data into an AWS S3 bucket ✅️
 - M3 - Configurable upload script using config file ✅️
   - Should allow configurable lambda start time and end time ✅️
-  - At this point, is already usable/useful for basic elections scraping
+  - At this point, is already usable/useful for basic elections scraping ✅️
   - Consider adding support for uploading docker images 🟠
-- M4 - Configurable helper function to pipe scraper data into specific AWS S3 bucket
-  - The data configuration/schema for AWS S3 should be set at this point 🟠
+- M4 - Configurable helper function to pipe scraper data into specific AWS S3 bucket ✅️
+  - The data configuration/schema for AWS S3 should be set at this point ✅️
     - consider JSON validation before deployment
   - consider adding support for uploading custom layers provided by pipe - multilanguage solution
     for AWS S3 upload helper functions
-- M5 - Helper function to collect all existing data from one scraper into a JSON response (Similar to an API service)
+- M5 - Helper function to collect all existing data from one scraper into a JSON response (Similar to an API service) ✅️
 - M6 - Developer testing and verification
   - Important to assess any footguns, embed preventative measures in the code to prevent developers from overwriting important S3 buckets or lambdas
   - Prevent devs from running lambda indefinitely ✅️ (must define end date)
@@ -101,4 +149,4 @@ For local development, you can symlink to your local version of `pipng-bag` with
   - Unit + integration testing? 🟠
     - Consider using local docker image for testing as well
   - Fetch/ingestion scripts to pull data from a variety of sources (google docs, sheets, pdfs, etc)?
-  - Formalized API for pulling elections data (data in a standardized, schema format)?
+  - Formalized API for pulling elections data (data in a standardized, schema format)? 🟠
