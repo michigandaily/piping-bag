@@ -1,7 +1,7 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { Temporal } from "@js-temporal/polyfill";
 
 import { load_config } from "./helpers/_utils.js";
+import { currentUnix } from "./helpers/_time.js";
 import { DEFAULT_REGION } from "./helpers/_defaults.js";
 
 /**
@@ -20,7 +20,7 @@ export async function pipe(payload: string, format: string = ".json") {
   const { config } = (await load_config())!;
   const { name, region = DEFAULT_REGION } = config;
   const { bucket } = config.schema;
-  const key = `pipe/${name}/${Temporal.Now.instant().epochMilliseconds}${format}`;
+  const key = `pipe/${name}/${currentUnix()}${format}`;
 
   // TODO: support multiple upload formats (JSON, CSV, e.t.c.)
   const client = new S3Client({ region });

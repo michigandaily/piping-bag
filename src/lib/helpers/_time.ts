@@ -1,10 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { SchedulerDate } from "./types.js";
-import { DEFAULT_TIMEZONE } from "./_defaults.js";
 
-export function currentUnix(timeZone: string = DEFAULT_TIMEZONE) {
-  const now = Temporal.Now.zonedDateTimeISO(timeZone);
-  return now.toInstant().epochMilliseconds;
+export function currentUnix() {
+  return Temporal.Now.instant().epochMilliseconds;
 }
 
 export function toUnix(

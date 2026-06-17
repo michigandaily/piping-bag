@@ -147,7 +147,7 @@ export class PipeClient {
   }
 
   /**
-  * A static member function for fetching straight from S3. It is recommneded 
+  * A static member function for fetching straight from S3. It is recommended  
   * you use the listener API, which uses these functions and handles configuration details for you.
   * However, these static functions can be used if you would like a more flexible/low level API.
   * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
@@ -189,7 +189,7 @@ export class PipeClient {
   }
 
   /**
-  * A static member function for fetching straight from S3. It is recommneded 
+  * A static member function for fetching straight from S3. It is recommended 
   * you use the listener API, which uses these functions and handles configuration details for you.
   * However, these static functions can be used if you would like a more flexible/low level API.
   * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
@@ -230,7 +230,7 @@ export class PipeClient {
   }
 
   /**
-  * A static member function for fetching straight from S3. It is recommneded 
+  * A static member function for fetching straight from S3. It is recommended 
   * you use the listener API, which uses these functions and handles configuration details for you.
   * However, these static functions can be used if you would like a more flexible/low level API.
   * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.
@@ -294,7 +294,7 @@ export class PipeClient {
   }
 
   /**
-  * A static member function for fetching straight from S3. It is recommneded 
+  * A static member function for fetching straight from S3. It is recommended 
   * you use the listener API, which uses these functions and handles configuration details for you.
   * However, these static functions can be used if you would like a more flexible/low level API.
   * @param client - Add an S3 Client. Make sure to initialize the client with empty credential strings.

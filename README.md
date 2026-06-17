@@ -75,7 +75,7 @@ export default defineConfig({
   profile: "pipe",
   deployment: {
     handler: "scraper.handler",
-    path: "./src/scraper.js",
+    path: "./src/scraper.js", // optional
     zip_dir: "./tmp",
     mem_size: 512, // 512 GB, optional
     timeout: 10, // 10 seconds, optional
@@ -122,7 +122,7 @@ The `pipe_role` and `scheduler_role` properties define the name of the AWS role 
 
 To start developing, clone the repo. Run `pnpm install` to install all dependencies. `piping-bag` is written in Typescript, so all code needs to be transpiled to Javascript before it can be used and tested as a package. To watch for changes and automatically transpile the code as you develop, run `pnpm dev`.
 
-For local development, you can symlink to your local version of `pipng-bag` with `pnpm link`. Now, whenever you want to test your local `piping-bag`, you can use a test folder with a valid `package.json`. Use `pnpm link piping-bag` to link your local version as a dependency of your test folder.
+For local development, you can symlink to your local version of `pipng-bag` with `pnpm link`. Now, whenever you want to test your local `piping-bag`, you can use a test folder with a valid `package.json`. Use `pnpm link path/to/piping-bag` to link your local version as a relative path dependency of your test folder.
 
 [^note]: For now, ask @yum25 for the pipe credentials. It should be added to 1password later.
 
@@ -141,9 +141,9 @@ For local development, you can symlink to your local version of `pipng-bag` with
     for AWS S3 upload helper functions
 - M5 - Helper function to collect all existing data from one scraper into a JSON response (Similar to an API service) ✅️
 - M6 - Developer testing and verification
-  - Important to assess any footguns, embed preventative measures in the code to prevent developers from overwriting important S3 buckets or lambdas
+  - Important to assess any footguns, embed preventative measures in the code to prevent developers from overwriting important S3 buckets or lambdas 🟠
   - Prevent devs from running lambda indefinitely ✅️ (must define end date)
-  - Assess S3 storage efficiency
+  - Assess S3 storage efficiency ✅️
 - M7 - Add (slack?) notification system for failures
   - Lambda running too long, lambda start times/end times
   - Lambda code failures
