@@ -1,11 +1,13 @@
+import EventEmitter from "node:events";
+
 import {
   GetObjectCommand,
   ListObjectsV2Command,
   S3Client,
 } from "@aws-sdk/client-s3";
 
-import EventEmitter from "node:events";
-
+import { currentUnix, toUnix } from "./helpers/_time.js";
+import { load_config } from "./helpers/_utils.js";
 import { DEFAULT_REGION, DEFAULT_TIMEZONE } from "./helpers/_defaults.js";
 import {
   type PipeData,
@@ -13,7 +15,6 @@ import {
   type SchedulerDate,
   PollingType,
 } from "./helpers/types.js";
-import { currentUnix, toUnix } from "./helpers/_time.js";
 
 /**
  * A polling client wrapper around the S3 API. Allows
@@ -63,6 +64,19 @@ export class PipeClient {
         secretAccessKey: "",
       },
       signer: { sign: async (request) => request },
+    });
+  }
+
+  static async Init(opts?: { useCache: boolean }) {
+    const { config } = (await load_config())!;
+    const { name, region = DEFAULT_REGION } = config;
+    const { bucket } = config.schema;
+
+    return new PipeClient({
+      name,
+      region,
+      bucket,
+      useCache: opts ? opts.useCache : true,
     });
   }
 
