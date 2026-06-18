@@ -9,7 +9,11 @@ import { DEFAULT_REGION } from "./helpers/_defaults.js";
  * @param format - Defines the filetype of the payload
  * @throws {Error} If storing data or metadata in S3 bucket fails
  */
-export async function pipe(payload: string, format: string = ".json") {
+export async function pipe(
+  payload: string,
+  format: string = ".json",
+  opts?: any,
+) {
   // NoOp and log on dev environments
   if (process.env.STAGE !== "production") {
     console.log(payload);
@@ -33,10 +37,17 @@ export async function pipe(payload: string, format: string = ".json") {
       }),
     );
   } catch (err: any) {
+    if (opts.SLACK_WEBHOOK) {
+      // Send slack notification that an error occurred (notify channel)
+    }
     throw Error(
       `pipe error: Failed to store latest scraper results in ${bucket}/${key}, see message: \n 
                     \t${err}`,
     );
+  }
+
+  if (opts.SLACK_WEBHOOK) {
+    // Send slack notification that new data was scraped (lower priority)
   }
 
   try {
@@ -55,6 +66,9 @@ export async function pipe(payload: string, format: string = ".json") {
       }),
     );
   } catch (err: any) {
+    if (opts.SLACK_WEBHOOK) {
+      // Send slack notification that an error occurred (notify channel)
+    }
     throw Error(
       `pipe error: Failed to update schema metadata in ${bucket}/${key}, see message: \n 
                     \t${err}`,
