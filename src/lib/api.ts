@@ -67,6 +67,12 @@ export class PipeClient {
     });
   }
 
+  /**
+   * Custom asynchronous constructor that reads your pipe.config.js in your project
+   * directory to create a PipeClient.
+   * @param opts - Configuration for optional overrides to default PipeClient construction.
+   * @param opts.useCache - Optional flag on whether to use the browser cache. Defaults to true.
+   */
   static async Init(opts?: { useCache: boolean }) {
     const { config } = (await load_config())!;
     const { name, region = DEFAULT_REGION } = config;
