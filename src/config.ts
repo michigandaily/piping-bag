@@ -28,6 +28,11 @@ export function defineConfig(configuration: Config) {
 
 /**
  * Defines a SchedulerDate type in pipe.config.js.
+ * @param date - The custom date object that can be converted to a unix tiimestamp
+ * @param date.hour
+ * @param date.day
+ * @param date.month - Optional field that defaults to the current month
+ * @param date.year - Optional field that defaults to the current year
  */
 export function defineSchedulerDate(date: SchedulerDate) {
   return date;
