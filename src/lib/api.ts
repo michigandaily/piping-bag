@@ -28,7 +28,8 @@ export class PipeClient {
   useCache: boolean;
   data: Record<number, any>;
 
-  poller!: ReturnType<typeof setInterval>;
+  poller!: ReturnType<typeof setTimeout> | undefined;
+  started!: boolean;
   emitter!: EventEmitter;
 
   /**
@@ -115,7 +116,7 @@ export class PipeClient {
 
     // TODO: set data in browser/clientside cache and pull
     // from there if it exists and useCache is true
-    this.poller = setInterval(async () => {
+    const poll = async () => {
       switch (type) {
         case PollingType.Latest:
           const entry = await PipeClient.fetchLatest(
@@ -140,7 +141,18 @@ export class PipeClient {
           this.emitter.emit(type, this.data);
           break;
       }
-    }, interval);
+
+      let id;
+      if (this.started) {
+        id = setTimeout(poll, interval);
+      }
+      return id;
+    };
+
+    this.started = true;
+    poll().then((id) => {
+      this.poller = id;
+    });
 
     return this.emitter;
   }
@@ -149,7 +161,8 @@ export class PipeClient {
    * Ends a poll if started. Stops all scheduled S3 fetches and removes all listeners.
    */
   endPoll() {
-    clearInterval(this.poller);
+    this.started = false;
+    clearTimeout(this.poller);
     this.emitter.removeAllListeners();
   }
 
