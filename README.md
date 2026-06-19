@@ -15,13 +15,13 @@ Run `pnpm install michigandaily/piping-bag` to get the current state of `piping-
 
 piping-bag has three use cases that tie together the core functionality of data collection and display:
 
-1. Deployment of a remote script that scrapes or fetches from external sources
-2. Storage of the data collected in a structured format
-3. Pulling the data from storage in a structured format
+1. [Deployment of a remote script that scrapes or fetches from external sources](#deployment)
+2. [Storage of the data collected in a structured format](#scraping)
+3. [Pulling the data from storage in a structured format](#fetching-and-pulling)
 
 The next sections show how to use the piping-bag interface to accomplish these steps.
 
-## Scraping
+### Scraping
 
 piping-bag supports writing your own scraping script and uploading data in a scheduled manner to S3. In order to input JSON data keyed by timestamp into
 S3 via your scraper, use the pipe() helper function:
@@ -34,7 +34,7 @@ await pipe(JSON.stringify(payload), ".json");
 // [current_unix_timestamp].json with contents of payload
 ```
 
-## Fetching and Pulling
+### Fetching and Pulling
 
 piping-bag also has API support for fetching from S3. If you use pipe() in your scraper, your data will automatically be formatted to be fetched properly.
 To use piping-bag's API for S3 fetching, create an instance of PipeClient:
@@ -54,14 +54,14 @@ client.listen("update", 5000, (data) => {
   console.log(data);
 });
 
-//Listens for changes every 5 seconds and returns the entire
+// Listens for changes every 5 seconds and returns the entire
 // timeline of changes, every file and timestamp.
 client.listen("change", 5000, (data) => {
   console.log(data);
 });
 ```
 
-## Deployment
+### Deployment
 
 Create a configuration file (e.g. `pipe.config.js`). The file should have a `deployment` property that outlines the necessary parameters needed to upload to AWS Lambda.
 
