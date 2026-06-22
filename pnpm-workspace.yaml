@@ -1,4 +1,4 @@
 allowBuilds:
   esbuild: true
 packages:
-  - 'src/testing/fixtures/js' 
+  - 'testing/fixtures/js' 

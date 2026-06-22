@@ -70,11 +70,11 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  src/testing/fixtures/js:
+  testing/fixtures/js:
     dependencies:
       piping-bag:
         specifier: workspace:*
-        version: link:../../../..
+        version: link:../../..
     devDependencies:
       eslint:
         specifier: ^10.0.2

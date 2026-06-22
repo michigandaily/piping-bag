@@ -12,11 +12,11 @@ import type {
 } from "@aws-sdk/client-lambda";
 
 import { fixtures, mockLambdaClient, unpack } from "../helpers.js";
-import type { Config } from "../../lib/helpers/types.js";
+import type { Config } from "../../src/lib/helpers/types.js";
 
-mock.module("../../lib/helpers/_utils.js", {
+mock.module("../../src/lib/helpers/_utils.js", {
   namedExports: {
-    ...(await import("../../lib/helpers/_utils.js")),
+    ...(await import("../../src/lib/helpers/_utils.js")),
     waitUntilUpdated: async (
       _: string,
       __: string,
@@ -25,7 +25,7 @@ mock.module("../../lib/helpers/_utils.js", {
   },
 });
 const { zipFiles, bundleHandlers, uploadFunction } =
-  await import("../../lib/cli/upload.js");
+  await import("../../src/lib/cli/upload.js");
 
 describe("Lambda function compression with archiver", () => {
   beforeEach(() => {
