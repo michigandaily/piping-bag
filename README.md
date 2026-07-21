@@ -4,12 +4,9 @@
 
 A standardized way to set up data scrapers and pull/refine data for The Michigan Daily. This can be seen as a sibling script of [michigandaily/sink](https://github.com/michigandaily/sink).
 
-> [!WARNING]  
-> This library is a work in progress
-
 ## Installation
 
-Run `pnpm install michigandaily/piping-bag` to get the current state of `piping-bag`. The project is being developed, so there are no official releases so far.
+Run `pnpm install michigandaily/piping-bag#v0.1.0` to get the latest release of `piping-bag` (still in beta). To get the most recent, unstable version, run `pnpm install michigandaily/piping-bag`. This is recommended for development purposes only.
 
 ## Usage
 
