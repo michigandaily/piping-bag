@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { program } from "commander";
+declare const __VERSION__: string;
 
 program
-  .version("0.0.1")
+  .version(__VERSION__)
   .name("pipe")
   .description("Data collection scripts")
   .command("deploy", "Deploys and schedules a custom script to AWS Lambda")

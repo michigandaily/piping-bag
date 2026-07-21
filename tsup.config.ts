@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
+import { version } from "./package.json";
 
 export default defineConfig({
   entry: [
@@ -13,6 +14,9 @@ export default defineConfig({
     "src/lib/api.ts",
     "src/helpers/types.ts",
   ],
+  define: {
+    __VERSION__: JSON.stringify(version),
+  },
   format: ["esm"],
   external: ["commander"],
   dts: true,

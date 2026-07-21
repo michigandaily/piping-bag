@@ -113,6 +113,7 @@ export async function bundleHandlers(
   if (!existsSync(file)) {
     fatal_error("File path defined in pipe configuration does not exist.");
   }
+
   // TODO: Create a unique temporary filename that auto-cleans if zip destination path is not defined
   if (!zip_dir || zip_dir.length === 0) {
     fatal_error(

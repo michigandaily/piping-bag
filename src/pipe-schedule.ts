@@ -89,7 +89,6 @@ const main = async (args: string[], opts: Options) => {
 const self = fileURLToPath(import.meta.url);
 if (process.argv[1] === self) {
   program
-    .version("0.0.1")
     .addArgument(
       new Argument(
         "<liveness>",
